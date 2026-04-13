@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../App';
 import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { db } from '@/src/lib/firebase';
 import { format, isAfter, differenceInHours } from 'date-fns';
 import { ShieldCheck, Copy, Eye, EyeOff, Clock, Globe, Zap, AlertCircle, ShoppingCart, QrCode, X as CloseIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';

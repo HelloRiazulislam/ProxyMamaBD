@@ -14,7 +14,7 @@ import {
   getDoc,
   setDoc
 } from 'firebase/firestore';
-import { db, auth } from '../lib/firebase';
+import { db, auth } from '@/src/lib/firebase';
 import axios from 'axios';
 
 enum OperationType {

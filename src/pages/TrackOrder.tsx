@@ -2,7 +2,7 @@ import PublicNavbar from '../components/PublicNavbar';
 import Footer from '../components/Footer';
 import { useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db } from '@/src/lib/firebase';
 import { Search, Package, Calendar, Clock, ShieldCheck, AlertCircle, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '../lib/utils';

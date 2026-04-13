@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../App';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { db } from '@/src/lib/firebase';
 import { format } from 'date-fns';
 import { History, ArrowUpRight, ArrowDownLeft, Wallet } from 'lucide-react';
 import { cn } from '../../lib/utils';

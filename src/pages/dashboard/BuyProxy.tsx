@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../App';
 import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { db } from '@/src/lib/firebase';
 import { toast } from 'react-hot-toast';
 import { ShoppingCart, Zap, Globe, Clock, ShieldCheck, Tag, TrendingDown, Check, AlertTriangle } from 'lucide-react';
 import { cn } from '../../lib/utils';

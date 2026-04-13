@@ -125,7 +125,6 @@ export const useSettings = () => useContext(SettingsContext);
 
 import { seedInitialData } from './services/seedService';
 import NoticeBar from './components/NoticeBar';
-import Chatbot from './components/Chatbot';
 
 import Onboarding from './pages/Onboarding';
 
@@ -294,7 +293,6 @@ export default function App() {
       <AuthContext.Provider value={{ user, profile, loading, logout }}>
         <Router>
           <NoticeBar />
-          <Chatbot />
           <ScrollToTop />
           <Routes>
           {/* Public Routes */}

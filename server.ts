@@ -17,7 +17,7 @@ dotenv.config();
 let db: any = null;
 const initFirebase = () => {
   try {
-    if (!admin.apps || admin.apps.length === 0) {
+    if (!admin.apps.length) {
       admin.initializeApp();
     }
     db = admin.firestore();

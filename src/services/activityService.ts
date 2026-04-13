@@ -1,5 +1,5 @@
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db } from '@/src/lib/firebase';
 
 export interface ActivityLog {
   uid?: string;

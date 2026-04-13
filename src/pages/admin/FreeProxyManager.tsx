@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
 import { collection, query, onSnapshot, addDoc, deleteDoc, doc, serverTimestamp, orderBy, limit } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { getFreeProxyCampaign, updateFreeProxyCampaign } from '../../services/dbService';
+import { getFreeProxyCampaign, updateFreeProxyCampaign, getCampaignHistory } from '../../services/dbService';
 import { toast } from 'react-hot-toast';
-import { Zap, Plus, Trash2, ShieldCheck, Clock, Globe, Activity, Save, ToggleLeft, ToggleRight, Calendar, Timer, Users, UserCheck } from 'lucide-react';
+import { Zap, Plus, Trash2, ShieldCheck, Clock, Globe, Activity, Save, ToggleLeft, ToggleRight, Calendar, Timer, Users, UserCheck, History as HistoryIcon, RotateCcw } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { formatDistanceToNow, isAfter, isBefore, format } from 'date-fns';
 
 export default function FreeProxyManager() {
   const [campaign, setCampaign] = useState<any>(null);
   const [claims, setClaims] = useState<any[]>([]);
+  const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [timeLeft, setTimeLeft] = useState<string>('');
@@ -47,7 +48,13 @@ export default function FreeProxyManager() {
       setLoading(false);
     };
 
+    const fetchHistory = async () => {
+      const data = await getCampaignHistory();
+      if (data) setHistory(data);
+    };
+
     fetchCampaign();
+    fetchHistory();
 
     // Listen to claims
     const claimsQuery = query(collection(db, 'freeProxyClaims'), orderBy('claimedAt', 'desc'), limit(50));
@@ -107,6 +114,26 @@ export default function FreeProxyManager() {
       startTime,
       endTime
     });
+    
+    // Refresh history
+    const data = await getCampaignHistory();
+    if (data) setHistory(data);
+  };
+
+  const reuseCampaign = (h: any) => {
+    if (!confirm('Reuse these settings for the current campaign?')) return;
+    setCampaign({
+      ...campaign,
+      title: h.title,
+      description: h.description,
+      proxyType: h.proxyType,
+      speed: h.speed,
+      host: h.host,
+      port: h.port,
+      username: h.username,
+      password: h.password
+    });
+    toast.success('Settings loaded from history. Click "Quick Start" or toggle Active to start.');
   };
 
   if (loading && !campaign) {
@@ -153,80 +180,225 @@ export default function FreeProxyManager() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Campaign Settings */}
-        <div className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left Column: Settings & Maintenance */}
+        <div className="lg:col-span-2 space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Campaign Settings */}
+            <div className="space-y-6">
+              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 p-6 shadow-sm">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center">
+                  <Zap className="mr-2 text-blue-600" size={20} />
+                  Campaign Settings
+                </h2>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Campaign Title</label>
+                    <input
+                      type="text"
+                      value={campaign?.title}
+                      onChange={(e) => setCampaign({ ...campaign, title: e.target.value })}
+                      onBlur={() => handleUpdateCampaign({ title: campaign.title })}
+                      className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Campaign Description</label>
+                    <textarea
+                      value={campaign?.description}
+                      onChange={(e) => setCampaign({ ...campaign, description: e.target.value })}
+                      onBlur={() => handleUpdateCampaign({ description: campaign.description })}
+                      className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none min-h-[80px]"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Proxy Type</label>
+                      <input
+                        type="text"
+                        value={campaign?.proxyType}
+                        onChange={(e) => setCampaign({ ...campaign, proxyType: e.target.value })}
+                        onBlur={() => handleUpdateCampaign({ proxyType: campaign.proxyType })}
+                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                        placeholder="e.g. SOCKS5 / HTTP"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Speed Limit</label>
+                      <select
+                        value={campaign?.speed}
+                        onChange={(e) => handleUpdateCampaign({ speed: e.target.value })}
+                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                      >
+                        <option value="Uncapped">Uncapped</option>
+                        <option value="150Mbps">150 Mbps</option>
+                        <option value="100Mbps">100 Mbps</option>
+                        <option value="70Mbps">70 Mbps</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-gray-100 dark:border-slate-800">
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-3">Quick Start Campaign</label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {[1, 6, 12, 24, 72, 168].map((hours) => (
+                        <button
+                          key={hours}
+                          onClick={() => startCampaign(hours)}
+                          className="px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-sm font-bold hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-200 transition-all flex items-center justify-center"
+                        >
+                          <Calendar size={14} className="mr-2" />
+                          {hours >= 24 ? `${hours / 24} Day${hours > 24 ? 's' : ''}` : `${hours} Hours`}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Proxy Credentials */}
+            <div className="space-y-6">
+              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 p-6 shadow-sm h-full">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center">
+                  <ShieldCheck className="mr-2 text-blue-600" size={20} />
+                  Proxy Credentials (Shared)
+                </h2>
+                <p className="text-xs text-gray-500 mb-6">This proxy will be shared among all users who claim the free gift.</p>
+                
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Host / IP</label>
+                      <input
+                        type="text"
+                        value={campaign?.host}
+                        onChange={(e) => setCampaign({ ...campaign, host: e.target.value })}
+                        onBlur={() => handleUpdateCampaign({ host: campaign.host })}
+                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Port</label>
+                      <input
+                        type="number"
+                        value={campaign?.port}
+                        onChange={(e) => setCampaign({ ...campaign, port: parseInt(e.target.value) || 0 })}
+                        onBlur={() => handleUpdateCampaign({ port: campaign.port })}
+                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Username</label>
+                      <input
+                        type="text"
+                        value={campaign?.username}
+                        onChange={(e) => setCampaign({ ...campaign, username: e.target.value })}
+                        onBlur={() => handleUpdateCampaign({ username: campaign.username })}
+                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Password</label>
+                      <input
+                        type="text"
+                        value={campaign?.password}
+                        onChange={(e) => setCampaign({ ...campaign, password: e.target.value })}
+                        onBlur={() => handleUpdateCampaign({ password: campaign.password })}
+                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-4">
+                    <div className="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-xl border border-orange-100 dark:border-orange-900/30">
+                      <p className="text-xs text-orange-700 dark:text-orange-300 leading-relaxed">
+                        <strong>Warning:</strong> Changing these credentials will only affect new claims. Users who have already claimed will keep using the previous credentials until their trial expires.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Claims List */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 p-6 shadow-sm">
             <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center">
-              <Zap className="mr-2 text-blue-600" size={20} />
-              Campaign Settings
+              <Users className="mr-2 text-blue-600" size={20} />
+              Recent Claims ({claims.length})
             </h2>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Campaign Title</label>
-                <input
-                  type="text"
-                  value={campaign?.title}
-                  onChange={(e) => setCampaign({ ...campaign, title: e.target.value })}
-                  onBlur={() => handleUpdateCampaign({ title: campaign.title })}
-                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                />
-              </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="text-xs text-gray-400 uppercase font-bold border-b border-gray-50 dark:border-slate-800">
+                  <tr>
+                    <th className="px-4 py-3">User</th>
+                    <th className="px-4 py-3">Email</th>
+                    <th className="px-4 py-3">Claimed At</th>
+                    <th className="px-4 py-3">Expires At</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
+                  {claims.length > 0 ? claims.map((claim) => (
+                    <tr key={claim.id} className="text-sm">
+                      <td className="px-4 py-3 font-bold text-gray-900 dark:text-white">{claim.displayName}</td>
+                      <td className="px-4 py-3 text-gray-500">{claim.email}</td>
+                      <td className="px-4 py-3 text-gray-500">
+                        {claim.claimedAt?.toDate ? format(claim.claimedAt.toDate(), 'MMM dd, HH:mm') : 'N/A'}
+                      </td>
+                      <td className="px-4 py-3 text-gray-500">
+                        {claim.expiresAt?.toDate ? format(claim.expiresAt.toDate(), 'MMM dd, HH:mm') : 'N/A'}
+                      </td>
+                    </tr>
+                  )) : (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-8 text-center text-gray-400">No claims yet.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
 
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Campaign Description</label>
-                <textarea
-                  value={campaign?.description}
-                  onChange={(e) => setCampaign({ ...campaign, description: e.target.value })}
-                  onBlur={() => handleUpdateCampaign({ description: campaign.description })}
-                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none min-h-[80px]"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Proxy Type</label>
-                  <input
-                    type="text"
-                    value={campaign?.proxyType}
-                    onChange={(e) => setCampaign({ ...campaign, proxyType: e.target.value })}
-                    onBlur={() => handleUpdateCampaign({ proxyType: campaign.proxyType })}
-                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                    placeholder="e.g. SOCKS5 / HTTP"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Speed Limit</label>
-                  <select
-                    value={campaign?.speed}
-                    onChange={(e) => handleUpdateCampaign({ speed: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                  >
-                    <option value="Uncapped">Uncapped</option>
-                    <option value="150Mbps">150 Mbps</option>
-                    <option value="100Mbps">100 Mbps</option>
-                    <option value="70Mbps">70 Mbps</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t border-gray-100 dark:border-slate-800">
-                <label className="block text-xs font-bold text-gray-400 uppercase mb-3">Quick Start Campaign</label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {[1, 6, 12, 24, 72, 168].map((hours) => (
-                    <button
-                      key={hours}
-                      onClick={() => startCampaign(hours)}
-                      className="px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-sm font-bold hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-200 transition-all flex items-center justify-center"
+        {/* Right Column: History & Maintenance */}
+        <div className="space-y-8">
+          {/* Campaign History */}
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 p-6 shadow-sm">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center">
+              <HistoryIcon className="mr-2 text-blue-600" size={20} />
+              Campaign History
+            </h2>
+            <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-slate-800">
+              {history.length > 0 ? history.map((h) => (
+                <div key={h.id} className="p-4 bg-gray-50 dark:bg-slate-800/50 rounded-xl border border-gray-100 dark:border-slate-800">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-blue-600 dark:text-blue-400">{format(h.savedAt, 'MMM dd, yyyy')}</span>
+                    <button 
+                      onClick={() => reuseCampaign(h)}
+                      className="p-1.5 bg-white dark:bg-slate-800 text-gray-400 hover:text-blue-600 rounded-lg border border-gray-100 dark:border-slate-700 transition-all"
+                      title="Reuse Settings"
                     >
-                      <Calendar size={14} className="mr-2" />
-                      {hours >= 24 ? `${hours / 24} Day${hours > 24 ? 's' : ''}` : `${hours} Hours`}
+                      <RotateCcw size={14} />
                     </button>
-                  ))}
+                  </div>
+                  <div className="text-sm font-bold text-gray-900 dark:text-white mb-1 truncate">{h.title}</div>
+                  <div className="text-[10px] text-gray-500 mb-2">{h.host}:{h.port}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400 rounded text-[9px] font-bold uppercase">{h.proxyType}</span>
+                    <span className="px-2 py-0.5 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400 rounded text-[9px] font-bold uppercase">{h.speed}</span>
+                  </div>
                 </div>
-              </div>
+              )) : (
+                <p className="text-center text-gray-400 py-4 text-sm">No history yet.</p>
+              )}
             </div>
           </div>
 
@@ -271,111 +443,6 @@ export default function FreeProxyManager() {
               </button>
             </div>
           </div>
-        </div>
-
-        {/* Proxy Credentials */}
-        <div className="space-y-6">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 p-6 shadow-sm">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center">
-              <ShieldCheck className="mr-2 text-blue-600" size={20} />
-              Proxy Credentials (Shared)
-            </h2>
-            <p className="text-xs text-gray-500 mb-6">This proxy will be shared among all users who claim the free gift.</p>
-            
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Host / IP</label>
-                  <input
-                    type="text"
-                    value={campaign?.host}
-                    onChange={(e) => setCampaign({ ...campaign, host: e.target.value })}
-                    onBlur={() => handleUpdateCampaign({ host: campaign.host })}
-                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Port</label>
-                  <input
-                    type="number"
-                    value={campaign?.port}
-                    onChange={(e) => setCampaign({ ...campaign, port: parseInt(e.target.value) || 0 })}
-                    onBlur={() => handleUpdateCampaign({ port: campaign.port })}
-                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Username</label>
-                  <input
-                    type="text"
-                    value={campaign?.username}
-                    onChange={(e) => setCampaign({ ...campaign, username: e.target.value })}
-                    onBlur={() => handleUpdateCampaign({ username: campaign.username })}
-                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Password</label>
-                  <input
-                    type="text"
-                    value={campaign?.password}
-                    onChange={(e) => setCampaign({ ...campaign, password: e.target.value })}
-                    onBlur={() => handleUpdateCampaign({ password: campaign.password })}
-                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-4">
-                <div className="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-xl border border-orange-100 dark:border-orange-900/30">
-                  <p className="text-xs text-orange-700 dark:text-orange-300 leading-relaxed">
-                    <strong>Warning:</strong> Changing these credentials will only affect new claims. Users who have already claimed will keep using the previous credentials until their trial expires.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Claims List */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 p-6 shadow-sm">
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center">
-          <Users className="mr-2 text-blue-600" size={20} />
-          Recent Claims ({claims.length})
-        </h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="text-xs text-gray-400 uppercase font-bold border-b border-gray-50 dark:border-slate-800">
-              <tr>
-                <th className="px-4 py-3">User</th>
-                <th className="px-4 py-3">Email</th>
-                <th className="px-4 py-3">Claimed At</th>
-                <th className="px-4 py-3">Expires At</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
-              {claims.length > 0 ? claims.map((claim) => (
-                <tr key={claim.id} className="text-sm">
-                  <td className="px-4 py-3 font-bold text-gray-900 dark:text-white">{claim.displayName}</td>
-                  <td className="px-4 py-3 text-gray-500">{claim.email}</td>
-                  <td className="px-4 py-3 text-gray-500">
-                    {claim.claimedAt?.toDate ? format(claim.claimedAt.toDate(), 'MMM dd, HH:mm') : 'N/A'}
-                  </td>
-                  <td className="px-4 py-3 text-gray-500">
-                    {claim.expiresAt?.toDate ? format(claim.expiresAt.toDate(), 'MMM dd, HH:mm') : 'N/A'}
-                  </td>
-                </tr>
-              )) : (
-                <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-gray-400">No claims yet.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
         </div>
       </div>
     </div>

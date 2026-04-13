@@ -432,8 +432,33 @@ export const updateFreeProxyCampaign = async (id: string, data: any) => {
     if (data.endTime instanceof Date) updateData.endTime = data.endTime;
     
     await updateDoc(campaignRef, updateData);
+
+    // Save to history if activating
+    if (data.isActive) {
+      await addDoc(collection(db, 'freeProxyCampaignHistory'), {
+        ...data,
+        campaignId: id,
+        savedAt: serverTimestamp()
+      });
+    }
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, `freeProxyCampaign/${id}`);
+  }
+};
+
+export const getCampaignHistory = async () => {
+  try {
+    const q = query(collection(db, 'freeProxyCampaignHistory'), orderBy('savedAt', 'desc'), limit(20));
+    const snap = await getDocs(q);
+    return snap.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      startTime: doc.data().startTime?.toDate?.() || doc.data().startTime,
+      endTime: doc.data().endTime?.toDate?.() || doc.data().endTime,
+      savedAt: doc.data().savedAt?.toDate?.() || doc.data().savedAt
+    }));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, 'freeProxyCampaignHistory');
   }
 };
 

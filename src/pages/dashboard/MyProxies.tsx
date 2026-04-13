@@ -122,13 +122,14 @@ export default function MyProxies() {
       const orderSnap = await getDoc(orderRef);
       
       if (orderSnap.exists()) {
-        generateInvoice({ id: orderSnap.id, ...orderSnap.data() }, profile);
+        generateInvoice({ id: orderSnap.id, ...orderSnap.data(), proxyDetails: `${proxy.host}:${proxy.port}` }, profile);
       } else {
         // Fallback: generate basic invoice from proxy data if order doc is missing
         generateInvoice({
           id: proxy.orderId || 'N/A',
           planTitle: proxy.planTitle || 'Proxy Subscription',
-          amount: 0, // We don't have the price in inventory doc
+          amount: proxy.amount || 0, // Try to get amount from proxy doc if available
+          proxyDetails: `${proxy.host}:${proxy.port}`,
           createdAt: { toDate: () => new Date(proxy.assignedAt?.toDate() || Date.now()) }
         }, profile);
       }
@@ -312,13 +313,15 @@ export default function MyProxies() {
                       )}
                     </div>
                     <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => handleDownloadInvoice(proxy)}
-                        className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all"
-                        title="Download Invoice"
-                      >
-                        <Download size={18} />
-                      </button>
+                      {proxy.collection !== 'freeProxyClaims' && (
+                        <button
+                          onClick={() => handleDownloadInvoice(proxy)}
+                          className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all"
+                          title="Download Invoice"
+                        >
+                          <Download size={18} />
+                        </button>
+                      )}
                       {proxy.collection !== 'freeProxyClaims' && (
                         <button
                           onClick={() => handleRenew(proxy.id)}

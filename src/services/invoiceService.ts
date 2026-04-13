@@ -46,10 +46,14 @@ export const generateInvoice = (order: any, profile: any) => {
     [
       '1',
       order.planTitle || 'Proxy Subscription',
-      `৳${order.amount.toFixed(2)}`,
-      `৳${order.amount.toFixed(2)}`
+      `৳${(order.amount || 0).toFixed(2)}`,
+      `৳${(order.amount || 0).toFixed(2)}`
     ]
   ];
+
+  if (order.proxyDetails) {
+    tableData.push(['', `Proxy: ${order.proxyDetails}`, '', '']);
+  }
 
   (doc as any).autoTable({
     startY: 100,
@@ -77,7 +81,7 @@ export const generateInvoice = (order: any, profile: any) => {
   doc.setFont('helvetica', 'bold');
   doc.text('Total Amount:', 140, finalY + 15);
   doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  doc.text(`৳${order.amount.toFixed(2)}`, 170, finalY + 15);
+  doc.text(`৳${(order.amount || 0).toFixed(2)}`, 170, finalY + 15);
 
   // Footer
   doc.setTextColor(156, 163, 175); // gray-400

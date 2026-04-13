@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
-import { collection, query, onSnapshot, addDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, onSnapshot, addDoc, deleteDoc, doc, serverTimestamp, orderBy, limit } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { getFreeProxyCampaign, updateFreeProxyCampaign } from '../../services/dbService';
 import { toast } from 'react-hot-toast';
-import { Zap, Plus, Trash2, ShieldCheck, Clock, Globe, Activity, Save, ToggleLeft, ToggleRight, Calendar, Timer } from 'lucide-react';
+import { Zap, Plus, Trash2, ShieldCheck, Clock, Globe, Activity, Save, ToggleLeft, ToggleRight, Calendar, Timer, Users, UserCheck } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { formatDistanceToNow, isAfter, isBefore } from 'date-fns';
+import { formatDistanceToNow, isAfter, isBefore, format } from 'date-fns';
 
 export default function FreeProxyManager() {
   const [campaign, setCampaign] = useState<any>(null);
+  const [claims, setClaims] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [timeLeft, setTimeLeft] = useState<string>('');
@@ -47,6 +48,14 @@ export default function FreeProxyManager() {
     };
 
     fetchCampaign();
+
+    // Listen to claims
+    const claimsQuery = query(collection(db, 'freeProxyClaims'), orderBy('claimedAt', 'desc'), limit(50));
+    const unsubClaims = onSnapshot(claimsQuery, (snap) => {
+      setClaims(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
+    return () => unsubClaims();
   }, []);
 
   // Timer logic
@@ -116,6 +125,10 @@ export default function FreeProxyManager() {
           <p className="text-gray-500 dark:text-gray-400 text-sm">Manage the daily free proxy trial for users.</p>
         </div>
         <div className="flex items-center gap-4">
+          <div className="px-4 py-2 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-xl border border-purple-100 dark:border-purple-900/30 flex items-center font-bold text-sm">
+            <UserCheck size={16} className="mr-2" />
+            {claims.length} Claims
+          </div>
           {timeLeft && (
             <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-xl border border-blue-100 dark:border-blue-900/30 flex items-center font-bold text-sm">
               <Timer size={16} className="mr-2" />
@@ -325,6 +338,44 @@ export default function FreeProxyManager() {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Claims List */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 p-6 shadow-sm">
+        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center">
+          <Users className="mr-2 text-blue-600" size={20} />
+          Recent Claims ({claims.length})
+        </h2>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead className="text-xs text-gray-400 uppercase font-bold border-b border-gray-50 dark:border-slate-800">
+              <tr>
+                <th className="px-4 py-3">User</th>
+                <th className="px-4 py-3">Email</th>
+                <th className="px-4 py-3">Claimed At</th>
+                <th className="px-4 py-3">Expires At</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
+              {claims.length > 0 ? claims.map((claim) => (
+                <tr key={claim.id} className="text-sm">
+                  <td className="px-4 py-3 font-bold text-gray-900 dark:text-white">{claim.displayName}</td>
+                  <td className="px-4 py-3 text-gray-500">{claim.email}</td>
+                  <td className="px-4 py-3 text-gray-500">
+                    {claim.claimedAt?.toDate ? format(claim.claimedAt.toDate(), 'MMM dd, HH:mm') : 'N/A'}
+                  </td>
+                  <td className="px-4 py-3 text-gray-500">
+                    {claim.expiresAt?.toDate ? format(claim.expiresAt.toDate(), 'MMM dd, HH:mm') : 'N/A'}
+                  </td>
+                </tr>
+              )) : (
+                <tr>
+                  <td colSpan={4} className="px-4 py-8 text-center text-gray-400">No claims yet.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

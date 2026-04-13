@@ -290,24 +290,26 @@ export default function MyProxies() {
                         <Clock size={14} className="mr-2 text-gray-400" />
                         Expires: <strong className="ml-1 text-gray-900 dark:text-gray-200">{format(new Date(proxy.expiryDate), 'MMM dd, yyyy')}</strong>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Auto-Renew</span>
-                        <button
-                          onClick={() => handleToggleAutoRenew(proxy.id, !!proxy.autoRenew)}
-                          disabled={togglingId === proxy.id}
-                          className={cn(
-                            "relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none",
-                            proxy.autoRenew ? "bg-blue-600" : "bg-gray-200 dark:bg-slate-700"
-                          )}
-                        >
-                          <span
+                      {proxy.collection !== 'freeProxyClaims' && (
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Auto-Renew</span>
+                          <button
+                            onClick={() => handleToggleAutoRenew(proxy.id, !!proxy.autoRenew)}
+                            disabled={togglingId === proxy.id}
                             className={cn(
-                              "inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform shadow-sm",
-                              proxy.autoRenew ? "translate-x-5.5" : "translate-x-1"
+                              "relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none",
+                              proxy.autoRenew ? "bg-blue-600" : "bg-gray-200 dark:bg-slate-700"
                             )}
-                          />
-                        </button>
-                      </div>
+                          >
+                            <span
+                              className={cn(
+                                "inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform shadow-sm",
+                                proxy.autoRenew ? "translate-x-5.5" : "translate-x-1"
+                              )}
+                            />
+                          </button>
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center space-x-2">
                       <button
@@ -317,13 +319,15 @@ export default function MyProxies() {
                       >
                         <Download size={18} />
                       </button>
-                      <button
-                        onClick={() => handleRenew(proxy.id)}
-                        disabled={renewingId === proxy.id}
-                        className="px-6 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-700 transition-all disabled:opacity-50 shadow-md shadow-blue-100 dark:shadow-none"
-                      >
-                        {renewingId === proxy.id ? 'Renewing...' : `Renew Proxy`}
-                      </button>
+                      {proxy.collection !== 'freeProxyClaims' && (
+                        <button
+                          onClick={() => handleRenew(proxy.id)}
+                          disabled={renewingId === proxy.id}
+                          className="px-6 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-700 transition-all disabled:opacity-50 shadow-md shadow-blue-100 dark:shadow-none"
+                        >
+                          {renewingId === proxy.id ? 'Renewing...' : `Renew Proxy`}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

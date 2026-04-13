@@ -117,7 +117,12 @@ export default function AdminUsers() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">User Management</h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm">View and manage platform users and their roles.</p>
+          <div className="flex items-center gap-3 mt-1">
+            <p className="text-gray-500 dark:text-gray-400 text-sm">View and manage platform users and their roles.</p>
+            <span className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg text-xs font-bold border border-blue-100 dark:border-blue-900/30">
+              {users.length} Registered
+            </span>
+          </div>
         </div>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />

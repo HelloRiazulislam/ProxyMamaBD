@@ -201,8 +201,7 @@ export default function Sidebar({ role }: SidebarProps) {
                   "flex items-center justify-between px-4 py-3 text-sm font-medium rounded-lg transition-colors",
                   location.pathname === link.path
                     ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400"
-                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-white",
-                  ['/dashboard', '/dashboard/buy-proxy', '/dashboard/my-proxies', '/dashboard/add-balance', '/dashboard/profile', '/admin', '/admin/users', '/admin/proxy-tracking', '/admin/proxy-inventory', '/admin/settings'].includes(link.path) ? "hidden lg:flex" : ""
+                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-white"
                 )}
               >
                 <div className="flex items-center">

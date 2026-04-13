@@ -14,7 +14,6 @@ export default function ProxyServers() {
 
   const [formData, setFormData] = useState({
     name: '',
-    location: 'Bangladesh',
     status: 'active',
     description: ''
   });
@@ -55,7 +54,6 @@ export default function ProxyServers() {
   const resetForm = () => {
     setFormData({
       name: '',
-      location: 'Bangladesh',
       status: 'active',
       description: ''
     });
@@ -66,7 +64,6 @@ export default function ProxyServers() {
     setEditingItem(item);
     setFormData({
       name: item.name,
-      location: item.location,
       status: item.status,
       description: item.description || ''
     });
@@ -85,7 +82,7 @@ export default function ProxyServers() {
 
   const filteredServers = servers.filter(s => 
     s.name.toLowerCase().includes(search.toLowerCase()) ||
-    s.location.toLowerCase().includes(search.toLowerCase())
+    (s.description && s.description.toLowerCase().includes(search.toLowerCase()))
   );
 
   return (
@@ -134,9 +131,11 @@ export default function ProxyServers() {
                 </div>
               </div>
               <h3 className="text-lg font-bold text-gray-900 mb-1">{server.name}</h3>
-              <div className="flex items-center text-sm text-gray-500 mb-4">
-                <Globe size={14} className="mr-1" /> {server.location}
-              </div>
+              {server.description && (
+                <div className="text-sm text-gray-500 mb-4 line-clamp-2">
+                  {server.description}
+                </div>
+              )}
               <div className="flex items-center justify-between pt-4 border-t border-gray-50">
                 <span className={cn(
                   "px-2 py-1 rounded-full text-[10px] font-bold uppercase",
@@ -174,17 +173,6 @@ export default function ProxyServers() {
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
                   placeholder="e.g. Premium BD Server 01"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.location}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                  placeholder="e.g. Dhaka, Bangladesh"
                 />
               </div>
               <div>

@@ -68,8 +68,6 @@ export default function BuyProxy() {
       const q = query(
         collection(db, 'proxyInventory'),
         where('isAssigned', '==', false),
-        where('speed', '==', selectedSpeed.id),
-        where('type', '==', selectedType.id),
         where('serverId', '==', selectedServer.id)
       );
       const snap = await getDocs(q);
@@ -89,18 +87,16 @@ export default function BuyProxy() {
 
     setLoading(true);
     try {
-      // 1. Get an available proxy with matching speed, type and server
+      // 1. Get an available proxy with matching server
       const q = query(
         collection(db, 'proxyInventory'),
         where('isAssigned', '==', false),
-        where('speed', '==', selectedSpeed.id),
-        where('type', '==', selectedType.id),
         where('serverId', '==', selectedServer.id)
       );
       const snap = await getDocs(q);
       
       if (snap.empty) {
-        throw new Error(`No ${selectedType.label} ${selectedSpeed.label} proxies available on ${selectedServer.name} at the moment.`);
+        throw new Error(`No proxies available on ${selectedServer.name} at the moment.`);
       }
       
       const proxyDoc = snap.docs[0];
@@ -117,6 +113,8 @@ export default function BuyProxy() {
           assignedAt: serverTimestamp(),
           expiryDate: expiryDate.toISOString(),
           planTitle: `${selectedType.label} - ${selectedSpeed.label} - ${selectedDuration.label}`,
+          type: selectedType.id,
+          speed: selectedSpeed.id,
           orderId: 'PENDING', // Temporary ID
           autoRenew: false
         });
@@ -210,41 +208,31 @@ export default function BuyProxy() {
               1. Select Server Location
             </h2>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {servers.map((server) => (
-                <button
-                  key={server.id}
-                  onClick={() => setSelectedServer(server)}
-                  className={cn(
-                    "p-4 rounded-xl border-2 transition-all text-left flex items-center gap-3",
-                    selectedServer?.id === server.id
-                      ? "border-blue-600 bg-blue-50 dark:bg-blue-900/20"
-                      : "border-gray-100 dark:border-slate-800 hover:border-gray-200 dark:hover:border-slate-700"
-                  )}
-                >
-                  <div className={cn(
-                    "w-10 h-10 rounded-lg flex items-center justify-center",
-                    selectedServer?.id === server.id ? "bg-blue-600 text-white" : "bg-gray-100 dark:bg-slate-800 text-gray-400"
-                  )}>
-                    <Globe size={20} />
-                  </div>
-                  <div>
-                    <div className={cn(
-                      "font-bold text-sm",
-                      selectedServer?.id === server.id ? "text-blue-600 dark:text-blue-400" : "text-gray-900 dark:text-white"
-                    )}>
-                      {server.name}
-                    </div>
-                    <div className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">{server.location}</div>
-                  </div>
-                </button>
-              ))}
-              {servers.length === 0 && (
-                <div className="col-span-full py-8 text-center text-gray-400 text-sm font-medium">
-                  No servers available. Please contact support.
-                </div>
-              )}
+            <div className="relative">
+              <select
+                value={selectedServer?.id || ''}
+                onChange={(e) => setSelectedServer(servers.find(s => s.id === e.target.value))}
+                className="w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none dark:text-white font-bold appearance-none"
+              >
+                <option value="" disabled>Select a server</option>
+                {servers.map((server) => (
+                  <option key={server.id} value={server.id}>
+                    {server.name} - {server.location}
+                  </option>
+                ))}
+              </select>
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                <Globe size={20} />
+              </div>
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+              </div>
             </div>
+            {servers.length === 0 && (
+              <div className="mt-4 text-center text-gray-400 text-sm font-medium">
+                No servers available. Please contact support.
+              </div>
+            )}
           </div>
 
           {/* Proxy Type Selection */}
@@ -393,25 +381,7 @@ export default function BuyProxy() {
             </div>
           </div>
 
-          {/* Features */}
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm">
-            <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Included Features</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {[
-                'High Speed Connection',
-                'Unlimited Bandwidth',
-                'SOCKS5 & HTTP Support',
-                'Instant Delivery',
-                '24/7 Support Access',
-                'Private IP Address'
-              ].map((feature, i) => (
-                <div key={i} className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                  <Check size={16} className="text-green-500 mr-2" />
-                  {feature}
-                </div>
-              ))}
-            </div>
-          </div>
+
         </div>
 
         {/* Right Side: Summary */}

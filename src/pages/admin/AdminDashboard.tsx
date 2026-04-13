@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { collection, query, onSnapshot, getDocs, where, orderBy } from 'firebase/firestore';
+import { collection, query, onSnapshot, getDocs, where, orderBy, limit } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { processAutoRenewals } from '../../services/dbService';
 import { toast } from 'react-hot-toast';
@@ -15,7 +15,8 @@ import {
   TrendingUp,
   BarChart3,
   PieChart as PieChartIcon,
-  RefreshCw
+  RefreshCw,
+  Activity
 } from 'lucide-react';
 import { format, subDays, startOfDay, isSameDay } from 'date-fns';
 import { 
@@ -47,6 +48,7 @@ export default function AdminDashboard() {
   const [processingAuto, setProcessingAuto] = useState(false);
   const [chartData, setChartData] = useState<any[]>([]);
   const [planDistribution, setPlanDistribution] = useState<any[]>([]);
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
 
   useEffect(() => {
     // Users
@@ -98,12 +100,23 @@ export default function AdminDashboard() {
       setStats(prev => ({ ...prev, autoRenewEnabled: snap.size }));
     });
 
+    // Recent Activity
+    const activityQuery = query(
+      collection(db, 'activityLogs'),
+      orderBy('createdAt', 'desc'),
+      limit(5)
+    );
+    const unsubActivity = onSnapshot(activityQuery, (snap) => {
+      setRecentActivity(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
     return () => {
       unsubUsers();
       unsubOrders();
       unsubStock();
       unsubRequests();
       unsubAuto();
+      unsubActivity();
     };
   }, []);
 
@@ -273,6 +286,38 @@ export default function AdminDashboard() {
                 <Bar dataKey="orders" fill="#3b82f6" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Recent Activity */}
+        <div className="lg:col-span-3 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+            <h2 className="font-bold text-gray-900">Recent Platform Activity</h2>
+          </div>
+          <div className="divide-y divide-gray-100">
+            {recentActivity.length > 0 ? (
+              recentActivity.map((log) => (
+                <div key={log.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+                      <Activity className="text-blue-600" size={20} />
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-900">{log.action}</div>
+                      <div className="text-xs text-gray-500">{log.details} <span className="text-blue-600 ml-1">({log.userEmail})</span></div>
+                    </div>
+                  </div>
+                  <div className="text-right text-xs text-gray-500">
+                    {log.createdAt ? format(log.createdAt.toDate(), 'MMM dd, yyyy HH:mm') : 'Just now'}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="p-8 text-center text-gray-500">
+                <Activity className="mx-auto mb-3 text-gray-300" size={40} />
+                <p>No recent activity</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -11,7 +11,8 @@ import {
   Info,
   AlertTriangle,
   CheckCircle,
-  XCircle
+  XCircle,
+  Activity
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { collection, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore';
@@ -30,11 +31,10 @@ export default function Dashboard() {
   const [activeProxiesCount, setActiveProxiesCount] = useState(0);
   const [expiringProxies, setExpiringProxies] = useState<any[]>([]);
   const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
 
   useEffect(() => {
     if (!profile) return;
-
-    logActivity('dashboard_view', 'User viewed dashboard', profile);
 
     // Announcements
     const annQuery = query(
@@ -86,11 +86,23 @@ export default function Dashboard() {
       setExpiringProxies(expiring);
     });
 
+    // Recent Activity
+    const activityQuery = query(
+      collection(db, 'activityLogs'),
+      where('uid', '==', profile.uid),
+      orderBy('createdAt', 'desc'),
+      limit(5)
+    );
+    const unsubActivity = onSnapshot(activityQuery, (snap) => {
+      setRecentActivity(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
     return () => {
       unsubAnn();
       unsubOrders();
       unsubRequests();
       unsubInventory();
+      unsubActivity();
     };
   }, [profile]);
 
@@ -259,6 +271,40 @@ export default function Dashboard() {
               <div className="p-8 text-center text-gray-500 dark:text-gray-400">
                 <Wallet className="mx-auto mb-3 text-gray-300 dark:text-slate-700" size={40} />
                 <p>{t.noPendingRequests}</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Recent Activity */}
+        <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm overflow-hidden">
+          <div className="p-6 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between">
+            <h2 className="font-bold text-gray-900 dark:text-white">Recent Activity</h2>
+          </div>
+          <div className="divide-y divide-gray-100 dark:divide-slate-800">
+            {recentActivity.length > 0 ? (
+              recentActivity.map((log) => (
+                <div key={log.id} className="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
+                      <Activity className="text-blue-600 dark:text-blue-400" size={20} />
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-900 dark:text-white">{log.action}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">{log.details}</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      {log.createdAt ? format(log.createdAt.toDate(), 'MMM dd, yyyy HH:mm') : 'Just now'}
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+                <Activity className="mx-auto mb-3 text-gray-300 dark:text-slate-700" size={40} />
+                <p>No recent activity</p>
               </div>
             )}
           </div>

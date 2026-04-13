@@ -110,6 +110,25 @@ export default function FreeProxyClaim() {
 
   if (loading || !campaign || (!campaign.isActive && !activeClaim)) return null;
 
+  if (activeClaim) {
+    return (
+      <div className="flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30 rounded-xl px-4 py-2">
+        <div className="flex items-center space-x-2">
+          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+          <span className="text-xs font-bold text-blue-900 dark:text-blue-300">Free Proxy Active</span>
+        </div>
+        <div className="flex items-center space-x-3 text-xs">
+          <span className="text-blue-700 dark:text-blue-400 font-medium flex items-center">
+            <Timer size={12} className="mr-1" /> {claimTimeLeft}
+          </span>
+          <span className="bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 px-2 py-1 rounded-md font-bold shadow-sm">
+            {campaign.speed}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl p-8 text-white shadow-xl shadow-blue-200 dark:shadow-none overflow-hidden relative group">
       {/* Decorative Elements */}

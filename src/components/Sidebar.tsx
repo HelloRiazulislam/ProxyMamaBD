@@ -34,6 +34,7 @@ import { signOut } from 'firebase/auth';
 import { cn } from '../lib/utils';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { useSettings, useAuth } from '../App';
+import { logActivity } from '../services/activityService';
 
 interface SidebarProps {
   role: 'admin' | 'user';
@@ -138,7 +139,6 @@ export default function Sidebar({ role }: SidebarProps) {
     { name: t.affiliate, icon: Gift, path: '/dashboard/affiliate' },
     { name: t.support, icon: MessageSquare, path: '/dashboard/support', badge: unreadSupportCount },
     { name: t.notifications, icon: Bell, path: '/dashboard/notifications', badge: unreadCount },
-    { name: t.activityLog, icon: Activity, path: '/dashboard/activity-log' },
     { name: t.profile, icon: User, path: '/dashboard/profile' },
   ];
 
@@ -157,13 +157,15 @@ export default function Sidebar({ role }: SidebarProps) {
     { name: 'Announcements', icon: Megaphone, path: '/admin/announcements' },
     { name: 'Support', icon: MessageSquare, path: '/admin/support', badge: openTicketsCount },
     { name: 'Notifications', icon: Bell, path: '/admin/notifications' },
-    { name: 'Activity Logs', icon: Activity, path: '/admin/activity-logs' },
     { name: 'Settings', icon: Settings, path: '/admin/settings' },
   ];
 
   const links = role === 'admin' ? adminLinks : userLinks;
 
   const handleLogout = async () => {
+    if (profile) {
+      await logActivity('Logout', 'User logged out', profile);
+    }
     await signOut(auth);
     navigate('/login');
   };

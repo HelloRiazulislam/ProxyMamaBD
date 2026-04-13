@@ -55,7 +55,8 @@ export default function Register() {
 
   const handleGoogleLogin = async () => {
     try {
-      await signInWithGoogle();
+      const user = await signInWithGoogle();
+      await logActivity('Login', 'User logged in via Google', { uid: user.uid, email: user.email, displayName: user.displayName } as any);
       toast.success('Logged in with Google!');
       navigate('/dashboard');
     } catch (error: any) {

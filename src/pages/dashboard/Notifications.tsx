@@ -17,13 +17,16 @@ export default function Notifications() {
 
     const q = query(
       collection(db, 'notifications'),
-      where('uid', 'in', [profile.uid, null]),
+      where('uid', 'in', [profile.uid, 'all']),
       orderBy('createdAt', 'desc')
     );
 
     const unsub = onSnapshot(q, (snap) => {
       const docs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setNotifications(docs);
+      setLoading(false);
+    }, (error) => {
+      console.error('Notification listener error:', error);
       setLoading(false);
     });
 

@@ -30,7 +30,7 @@ export default function AdminNotifications() {
     try {
       await addDoc(collection(db, 'notifications'), {
         ...formData,
-        uid: formData.uid || null, // null means global
+        uid: formData.uid || 'all', // 'all' means global
         isRead: false,
         createdAt: serverTimestamp()
       });

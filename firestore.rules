@@ -71,7 +71,8 @@ service cloud.firestore {
 
     // Notifications
     match /notifications/{notificationId} {
-      allow read, update, delete: if isAuthenticated() && resource.data.uid == request.auth.uid;
+      allow read: if isAuthenticated() && (resource.data.uid == request.auth.uid || resource.data.uid == 'all');
+      allow update, delete: if isAuthenticated() && resource.data.uid == request.auth.uid;
     }
 
     // Coupons

@@ -60,7 +60,7 @@ export default function Sidebar({ role }: SidebarProps) {
     // Unread Notifications
     const q = query(
       collection(db, 'notifications'),
-      where('uid', 'in', [auth.currentUser.uid, null]),
+      where('uid', 'in', [auth.currentUser.uid, 'all']),
       orderBy('createdAt', 'desc')
     );
     

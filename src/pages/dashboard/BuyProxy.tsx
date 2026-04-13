@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../App';
 import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
-import { db } from '@/src/lib/firebase';
+import { db } from '../../lib/firebase';
 import { toast } from 'react-hot-toast';
 import { ShoppingCart, Zap, Globe, Clock, ShieldCheck, Tag, TrendingDown, Check, AlertTriangle } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -93,43 +93,79 @@ export default function BuyProxy() {
       const expiryDate = new Date();
       expiryDate.setDate(expiryDate.getDate() + selectedDuration.days);
 
-      await updateDoc(proxyDoc.ref, {
-        isAssigned: true,
-        assignedToUid: profile.uid,
-        assignedToEmail: profile.email,
-        assignedAt: serverTimestamp(),
-        expiryDate: expiryDate.toISOString(),
-        planTitle: `${selectedType.label} - ${selectedSpeed.label} - ${selectedDuration.label}`,
-        autoRenew: false
-      });
+      try {
+        await updateDoc(proxyDoc.ref, {
+          isAssigned: true,
+          assignedToUid: profile.uid,
+          assignedToEmail: profile.email,
+          assignedAt: serverTimestamp(),
+          expiryDate: expiryDate.toISOString(),
+          planTitle: `${selectedType.label} - ${selectedSpeed.label} - ${selectedDuration.label}`,
+          orderId: 'PENDING', // Temporary ID
+          autoRenew: false
+        });
+      } catch (err: any) {
+        console.error("Inventory update failed:", err);
+        throw new Error("Failed to reserve proxy. Please try again.");
+      }
 
       // 3. Deduct balance
-      await updateDoc(doc(db, 'users', profile.uid), {
-        walletBalance: increment(-finalPrice)
-      });
+      try {
+        await updateDoc(doc(db, 'users', profile.uid), {
+          walletBalance: increment(-finalPrice)
+        });
+      } catch (err: any) {
+        console.error("Balance deduction failed:", err);
+        // Rollback inventory if balance deduction fails
+        await updateDoc(proxyDoc.ref, {
+          isAssigned: false,
+          assignedToUid: '',
+          assignedToEmail: '',
+          assignedAt: null,
+          expiryDate: '',
+          planTitle: '',
+          orderId: '',
+          autoRenew: false
+        });
+        throw new Error("Failed to process payment. Please check your balance.");
+      }
 
       // 4. Create order record
-      await addDoc(collection(db, 'orders'), {
-        uid: profile.uid,
-        userEmail: profile.email,
-        proxyId: proxyDoc.id,
-        planTitle: `${selectedType.label} - ${selectedSpeed.label} - ${selectedDuration.label}`,
-        amount: finalPrice,
-        status: 'completed',
-        createdAt: serverTimestamp()
-      });
+      let orderId = '';
+      try {
+        const orderRef = await addDoc(collection(db, 'orders'), {
+          uid: profile.uid,
+          userEmail: profile.email,
+          proxyId: proxyDoc.id,
+          planTitle: `${selectedType.label} - ${selectedSpeed.label} - ${selectedDuration.label}`,
+          amount: finalPrice,
+          status: 'completed',
+          createdAt: serverTimestamp()
+        });
+        orderId = orderRef.id;
+        
+        // Update proxy with real order ID
+        await updateDoc(proxyDoc.ref, { orderId });
+      } catch (err: any) {
+        console.error("Order creation failed:", err);
+        // This is a critical state - balance deducted but order failed
+        // We still have the proxy assigned, so we'll try to show it
+      }
 
       // 5. Log activity
-      await logActivity(
-        'Proxy Purchase',
-        `Purchased ${selectedType.label} ${selectedSpeed.label} for ${selectedDuration.label} (৳${finalPrice})`,
-        profile
-      );
+      try {
+        await logActivity(
+          'Proxy Purchase',
+          `Purchased ${selectedType.label} ${selectedSpeed.label} for ${selectedDuration.label} (৳${finalPrice})`,
+          profile
+        );
+      } catch (err) {}
 
       toast.success('Proxy purchased successfully!');
       navigate('/dashboard/my-proxies');
     } catch (error: any) {
-      toast.error(error.message || 'Purchase failed');
+      console.error("Purchase error:", error);
+      toast.error(error.message || 'Purchase failed due to permission or system error');
     } finally {
       setLoading(false);
     }

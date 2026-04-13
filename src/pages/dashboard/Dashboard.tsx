@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { collection, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore';
-import { db } from '@/src/lib/firebase';
+import { db } from '../../lib/firebase';
 import { format, differenceInHours } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { cn } from '../../lib/utils';

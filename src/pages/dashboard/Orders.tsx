@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../App';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
-import { db } from '@/src/lib/firebase';
+import { db } from '../../lib/firebase';
 import { format } from 'date-fns';
 import { ShoppingCart, ShieldCheck, Clock, AlertCircle, Copy, Check, Download } from 'lucide-react';
 import { cn } from '../../lib/utils';

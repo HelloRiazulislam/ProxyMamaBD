@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../App';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
-import { db } from '@/src/lib/firebase';
+import { db } from '../../lib/firebase';
 import { openTicket } from '../../services/dbService';
 import { MessageSquare, Plus, X, Clock, AlertCircle, ChevronRight, Send } from 'lucide-react';
 import { toast } from 'react-hot-toast';

@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../App';
 import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
-import { db } from '@/src/lib/firebase';
+import { db } from '../../lib/firebase';
 import { format, isAfter, differenceInHours } from 'date-fns';
-import { ShieldCheck, Copy, Eye, EyeOff, Clock, Globe, Zap, AlertCircle, ShoppingCart, QrCode, X as CloseIcon } from 'lucide-react';
+import { ShieldCheck, Copy, Eye, EyeOff, Clock, Globe, Zap, AlertCircle, ShoppingCart, QrCode, X as CloseIcon, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { cn } from '../../lib/utils';
 import { renewProxy, toggleAutoRenew } from '../../services/dbService';
 import { QRCodeSVG } from 'qrcode.react';
 import { useNavigate } from 'react-router-dom';
+import { generateInvoice } from '../../services/invoiceService';
 
 export default function MyProxies() {
   const { profile } = useAuth();
@@ -75,6 +76,33 @@ export default function MyProxies() {
   const isExpiringSoon = (expiryDate: string) => {
     const hoursLeft = differenceInHours(new Date(expiryDate), new Date());
     return hoursLeft > 0 && hoursLeft <= 24;
+  };
+
+  const handleDownloadInvoice = async (proxy: any) => {
+    if (!profile || !proxy.orderId) {
+      toast.error('Order information not found for this proxy.');
+      return;
+    }
+
+    try {
+      const orderRef = doc(db, 'orders', proxy.orderId);
+      const orderSnap = await getDoc(orderRef);
+      
+      if (orderSnap.exists()) {
+        generateInvoice({ id: orderSnap.id, ...orderSnap.data() }, profile);
+      } else {
+        // Fallback: generate basic invoice from proxy data if order doc is missing
+        generateInvoice({
+          id: proxy.orderId || 'N/A',
+          planTitle: proxy.planTitle || 'Proxy Subscription',
+          amount: 0, // We don't have the price in inventory doc
+          createdAt: { toDate: () => new Date(proxy.assignedAt?.toDate() || Date.now()) }
+        }, profile);
+      }
+    } catch (error) {
+      console.error('Error downloading invoice:', error);
+      toast.error('Failed to generate invoice.');
+    }
   };
 
   return (
@@ -248,13 +276,22 @@ export default function MyProxies() {
                         </button>
                       </div>
                     </div>
-                    <button
-                      onClick={() => handleRenew(proxy.id)}
-                      disabled={renewingId === proxy.id}
-                      className="px-6 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-700 transition-all disabled:opacity-50 shadow-md shadow-blue-100 dark:shadow-none"
-                    >
-                      {renewingId === proxy.id ? 'Renewing...' : `Renew Proxy`}
-                    </button>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => handleDownloadInvoice(proxy)}
+                        className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all"
+                        title="Download Invoice"
+                      >
+                        <Download size={18} />
+                      </button>
+                      <button
+                        onClick={() => handleRenew(proxy.id)}
+                        disabled={renewingId === proxy.id}
+                        className="px-6 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-700 transition-all disabled:opacity-50 shadow-md shadow-blue-100 dark:shadow-none"
+                      >
+                        {renewingId === proxy.id ? 'Renewing...' : `Renew Proxy`}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

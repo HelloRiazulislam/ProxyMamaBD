@@ -7,7 +7,7 @@ import dotenv from "dotenv";
 import axios from "axios";
 import { HttpsProxyAgent } from "https-proxy-agent";
 import cron from "node-cron";
-import * as admin from "firebase-admin";
+import admin from "firebase-admin";
 import { RouterOSAPI } from "node-routeros";
 import yaml from "js-yaml";
 
@@ -17,7 +17,7 @@ dotenv.config();
 let db: any = null;
 const initFirebase = () => {
   try {
-    if (!admin.apps.length) {
+    if (!admin.apps || admin.apps.length === 0) {
       admin.initializeApp();
     }
     db = admin.firestore();

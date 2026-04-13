@@ -112,30 +112,40 @@ export default function MyProxies() {
   };
 
   const handleDownloadInvoice = async (proxy: any) => {
-    if (!profile || !proxy.orderId) {
-      toast.error('Order information not found for this proxy.');
-      return;
-    }
+    if (!profile) return;
+    
+    const orderId = proxy.orderId || proxy.id; // Fallback to proxy id if orderId is missing
 
     try {
-      const orderRef = doc(db, 'orders', proxy.orderId);
+      const orderRef = doc(db, 'orders', orderId);
       const orderSnap = await getDoc(orderRef);
       
       if (orderSnap.exists()) {
         generateInvoice({ id: orderSnap.id, ...orderSnap.data(), proxyDetails: `${proxy.host}:${proxy.port}` }, profile);
       } else {
-        // Fallback: generate basic invoice from proxy data if order doc is missing
+        // Fallback: generate basic invoice from proxy data
         generateInvoice({
-          id: proxy.orderId || 'N/A',
+          id: orderId,
           planTitle: proxy.planTitle || 'Proxy Subscription',
-          amount: proxy.amount || 0, // Try to get amount from proxy doc if available
+          amount: proxy.amount || 0,
           proxyDetails: `${proxy.host}:${proxy.port}`,
-          createdAt: { toDate: () => new Date(proxy.assignedAt?.toDate() || Date.now()) }
+          createdAt: proxy.assignedAt || proxy.claimedAt || { toDate: () => new Date() }
         }, profile);
       }
     } catch (error) {
       console.error('Error downloading invoice:', error);
-      toast.error('Failed to generate invoice.');
+      // Even if fetch fails, try to generate with what we have
+      try {
+        generateInvoice({
+          id: orderId,
+          planTitle: proxy.planTitle || 'Proxy Subscription',
+          amount: proxy.amount || 0,
+          proxyDetails: `${proxy.host}:${proxy.port}`,
+          createdAt: proxy.assignedAt || proxy.claimedAt || { toDate: () => new Date() }
+        }, profile);
+      } catch (innerError) {
+        toast.error('Failed to generate invoice.');
+      }
     }
   };
 

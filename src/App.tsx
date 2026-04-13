@@ -61,6 +61,7 @@ import AdminCoupons from './pages/admin/Coupons';
 import AdminSupportTickets from './pages/admin/SupportTickets';
 import AdminAnnouncements from './pages/admin/Announcements';
 import AdminGiftCards from './pages/admin/GiftCards';
+import AdminProxyServers from './pages/admin/ProxyServers';
 import FreeProxyManager from './pages/admin/FreeProxyManager';
 import AdminActivityLogs from './pages/admin/ActivityLogs';
 
@@ -342,6 +343,7 @@ export default function App() {
             <Route index element={<AdminDashboard />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="proxy-inventory" element={<AdminProxyInventory />} />
+            <Route path="proxy-servers" element={<AdminProxyServers />} />
             <Route path="proxy-tracking" element={<AdminProxyTracking />} />
             <Route path="balance-requests" element={<AdminBalanceRequests />} />
             <Route path="orders" element={<AdminOrders />} />

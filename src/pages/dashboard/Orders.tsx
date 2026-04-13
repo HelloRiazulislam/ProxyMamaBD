@@ -80,7 +80,10 @@ export default function Orders() {
                     <td className="px-6 py-4 font-bold text-gray-900 dark:text-white whitespace-nowrap">{order.planTitle}</td>
                     <td className="px-6 py-4 font-bold text-gray-900 dark:text-white whitespace-nowrap">৳{order.amount}</td>
                     <td className="px-6 py-4 text-gray-500 dark:text-gray-400 whitespace-nowrap">{format(order.createdAt?.toDate() || new Date(), 'MMM dd, yyyy')}</td>
-                    <td className="px-6 py-4 text-gray-500 dark:text-gray-400 whitespace-nowrap">{order.expiryDate ? format(new Date(order.expiryDate), 'MMM dd, yyyy') : 'N/A'}</td>
+                    <td className="px-6 py-4 text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                      {order.expiryDate ? format(new Date(order.expiryDate), 'MMM dd, yyyy') : 
+                       order.expiry?.toDate ? format(order.expiry.toDate(), 'MMM dd, yyyy') : 'N/A'}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={cn(
                         "px-2 py-1 rounded-full text-[10px] font-bold",

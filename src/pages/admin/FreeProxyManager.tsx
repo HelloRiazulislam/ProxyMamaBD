@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
-import { collection, query, onSnapshot, addDoc, deleteDoc, doc, serverTimestamp, orderBy, limit } from 'firebase/firestore';
+import { useState, useEffect, useMemo } from 'react';
+import { collection, query, onSnapshot, addDoc, deleteDoc, doc, serverTimestamp, orderBy, limit, getDocs, where } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { getFreeProxyCampaign, updateFreeProxyCampaign, getCampaignHistory } from '../../services/dbService';
 import { toast } from 'react-hot-toast';
-import { Zap, Plus, Trash2, ShieldCheck, Clock, Globe, Activity, Save, ToggleLeft, ToggleRight, Calendar, Timer, Users, UserCheck, History as HistoryIcon, RotateCcw } from 'lucide-react';
+import { Zap, Plus, Trash2, ShieldCheck, Clock, Globe, Activity, Save, ToggleLeft, ToggleRight, Calendar, Timer, Users, UserCheck, History as HistoryIcon, RotateCcw, TrendingUp, Gift, ExternalLink, Search } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { formatDistanceToNow, isAfter, isBefore, format } from 'date-fns';
+import { formatDistanceToNow, isAfter, isBefore, format, startOfDay, endOfDay } from 'date-fns';
 
 export default function FreeProxyManager() {
   const [campaign, setCampaign] = useState<any>(null);
@@ -14,6 +14,33 @@ export default function FreeProxyManager() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [timeLeft, setTimeLeft] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedDuration, setSelectedDuration] = useState(24);
+  
+  // Stats
+  const stats = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const todayClaims = claims.filter(c => {
+      const claimDate = c.claimedAt?.toDate ? c.claimedAt.toDate() : new Date(c.claimedAt);
+      return claimDate >= today;
+    }).length;
+
+    return {
+      total: claims.length,
+      today: todayClaims,
+      active: campaign?.isActive ? 'ACTIVE' : 'INACTIVE',
+      historyCount: history.length
+    };
+  }, [claims, campaign, history]);
+
+  const filteredClaims = useMemo(() => {
+    return claims.filter(c => 
+      c.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.displayName?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [claims, searchTerm]);
   
   useEffect(() => {
     const fetchCampaign = async () => {
@@ -146,93 +173,144 @@ export default function FreeProxyManager() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Free Proxy Campaign</h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm">Manage the daily free proxy trial for users.</p>
+          <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight flex items-center">
+            <Gift className="mr-3 text-blue-600" size={32} />
+            Campaign Command Center
+          </h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Manage, monitor, and deploy free proxy gift campaigns.</p>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="px-4 py-2 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-xl border border-purple-100 dark:border-purple-900/30 flex items-center font-bold text-sm">
-            <UserCheck size={16} className="mr-2" />
-            {claims.length} Claims
+        <div className="flex items-center space-x-3">
+          <div className={cn(
+            "px-4 py-2 rounded-2xl border flex items-center space-x-2 font-bold text-sm transition-all",
+            campaign?.isActive 
+              ? "bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-900/30 text-green-600 dark:text-green-400" 
+              : "bg-gray-50 dark:bg-slate-800 border-gray-100 dark:border-slate-700 text-gray-400"
+          )}>
+            <div className={cn("w-2 h-2 rounded-full", campaign?.isActive ? "bg-green-500 animate-pulse" : "bg-gray-400")} />
+            <span>{campaign?.isActive ? 'LIVE NOW' : 'OFFLINE'}</span>
           </div>
-          {timeLeft && (
-            <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-xl border border-blue-100 dark:border-blue-900/30 flex items-center font-bold text-sm">
-              <Timer size={16} className="mr-2" />
-              {timeLeft}
+          <button
+            onClick={() => {
+              if (campaign?.isActive) {
+                handleUpdateCampaign({ isActive: false });
+              } else {
+                startCampaign(selectedDuration);
+              }
+            }}
+            className={cn(
+              "px-6 py-2 rounded-2xl font-bold text-sm transition-all shadow-lg",
+              campaign?.isActive 
+                ? "bg-red-600 text-white hover:bg-red-700 shadow-red-100 dark:shadow-none" 
+                : "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-100 dark:shadow-none"
+            )}
+          >
+            {campaign?.isActive ? 'Stop Campaign' : 'Start Campaign'}
+          </button>
+        </div>
+      </div>
+
+      {/* Stats Dashboard */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-gray-100 dark:border-slate-800 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-2xl">
+              <Users size={24} />
             </div>
-          )}
-          {campaign && (
-            <button
-              onClick={() => handleUpdateCampaign({ isActive: !campaign.isActive })}
-              disabled={saving}
-              className={cn(
-                "flex items-center px-6 py-2.5 rounded-xl font-bold transition-all shadow-lg",
-                campaign.isActive 
-                  ? "bg-green-100 text-green-700 hover:bg-green-200 shadow-green-100" 
-                  : "bg-red-100 text-red-700 hover:bg-red-200 shadow-red-100"
-              )}
-            >
-              {campaign.isActive ? <ToggleRight className="mr-2" /> : <ToggleLeft className="mr-2" />}
-              Campaign {campaign.isActive ? 'Active' : 'Inactive'}
-            </button>
-          )}
+            <TrendingUp size={20} className="text-green-500" />
+          </div>
+          <div className="text-3xl font-black text-gray-900 dark:text-white">{stats.total}</div>
+          <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Claims</div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-gray-100 dark:border-slate-800 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 rounded-2xl">
+              <Zap size={24} />
+            </div>
+            <span className="text-[10px] font-bold px-2 py-1 bg-orange-100 dark:bg-orange-900/40 text-orange-600 rounded-lg">TODAY</span>
+          </div>
+          <div className="text-3xl font-black text-gray-900 dark:text-white">{stats.today}</div>
+          <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">New Claims Today</div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-gray-100 dark:border-slate-800 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-2xl">
+              <HistoryIcon size={24} />
+            </div>
+          </div>
+          <div className="text-3xl font-black text-gray-900 dark:text-white">{stats.historyCount}</div>
+          <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">Past Campaigns</div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-gray-100 dark:border-slate-800 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-2xl">
+              <Timer size={24} />
+            </div>
+          </div>
+          <div className="text-lg font-black text-gray-900 dark:text-white truncate">{timeLeft || 'No Active Window'}</div>
+          <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">Time Remaining</div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column: Settings & Maintenance */}
+        {/* Left Column: Settings */}
         <div className="lg:col-span-2 space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Campaign Settings */}
-            <div className="space-y-6">
-              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 p-6 shadow-sm">
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center">
-                  <Zap className="mr-2 text-blue-600" size={20} />
-                  Campaign Settings
-                </h2>
-                
-                <div className="space-y-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-gray-100 dark:border-slate-800 shadow-sm overflow-hidden">
+            <div className="p-6 border-b border-gray-50 dark:border-slate-800 flex items-center justify-between bg-gray-50/50 dark:bg-slate-800/50">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center">
+                <Activity className="mr-2 text-blue-600" size={20} />
+                Campaign Configuration
+              </h2>
+              <div className="flex items-center space-x-2">
+                <span className="text-xs text-gray-500">Auto-saves on blur</span>
+              </div>
+            </div>
+            
+            <div className="p-8 space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-6">
                   <div>
-                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Campaign Title</label>
-                    <input
-                      type="text"
-                      value={campaign?.title}
-                      onChange={(e) => setCampaign({ ...campaign, title: e.target.value })}
-                      onBlur={() => handleUpdateCampaign({ title: campaign.title })}
-                      className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Campaign Description</label>
-                    <textarea
-                      value={campaign?.description}
-                      onChange={(e) => setCampaign({ ...campaign, description: e.target.value })}
-                      onBlur={() => handleUpdateCampaign({ description: campaign.description })}
-                      className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none min-h-[80px]"
-                    />
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Campaign Identity</label>
+                    <div className="space-y-4">
+                      <input
+                        type="text"
+                        placeholder="Campaign Title"
+                        value={campaign?.title}
+                        onChange={(e) => setCampaign({ ...campaign, title: e.target.value })}
+                        onBlur={() => handleUpdateCampaign({ title: campaign.title })}
+                        className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-bold"
+                      />
+                      <textarea
+                        placeholder="Campaign Description"
+                        value={campaign?.description}
+                        onChange={(e) => setCampaign({ ...campaign, description: e.target.value })}
+                        onBlur={() => handleUpdateCampaign({ description: campaign.description })}
+                        className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none min-h-[100px] text-sm"
+                      />
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Proxy Type</label>
+                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Protocol</label>
                       <input
                         type="text"
                         value={campaign?.proxyType}
                         onChange={(e) => setCampaign({ ...campaign, proxyType: e.target.value })}
                         onBlur={() => handleUpdateCampaign({ proxyType: campaign.proxyType })}
-                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                        placeholder="e.g. SOCKS5 / HTTP"
+                        className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm"
                       />
                     </div>
-
                     <div>
-                      <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Speed Limit</label>
+                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Speed</label>
                       <select
                         value={campaign?.speed}
                         onChange={(e) => handleUpdateCampaign({ speed: e.target.value })}
-                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-sm"
                       >
                         <option value="Uncapped">Uncapped</option>
                         <option value="150Mbps">150 Mbps</option>
@@ -241,88 +319,74 @@ export default function FreeProxyManager() {
                       </select>
                     </div>
                   </div>
+                </div>
 
-                  <div className="pt-4 border-t border-gray-100 dark:border-slate-800">
-                    <label className="block text-xs font-bold text-gray-400 uppercase mb-3">Quick Start Campaign</label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Network Credentials</label>
+                    <div className="p-6 bg-blue-50/30 dark:bg-blue-900/10 rounded-3xl border border-blue-100/50 dark:border-blue-900/20 space-y-4">
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="col-span-2">
+                          <input
+                            type="text"
+                            placeholder="Host / IP"
+                            value={campaign?.host}
+                            onChange={(e) => setCampaign({ ...campaign, host: e.target.value })}
+                            onBlur={() => handleUpdateCampaign({ host: campaign.host })}
+                            className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono"
+                          />
+                        </div>
+                        <div>
+                          <input
+                            type="number"
+                            placeholder="Port"
+                            value={campaign?.port}
+                            onChange={(e) => setCampaign({ ...campaign, port: parseInt(e.target.value) || 0 })}
+                            onBlur={() => handleUpdateCampaign({ port: campaign.port })}
+                            className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <input
+                          type="text"
+                          placeholder="Username"
+                          value={campaign?.username}
+                          onChange={(e) => setCampaign({ ...campaign, username: e.target.value })}
+                          onBlur={() => handleUpdateCampaign({ username: campaign.username })}
+                          className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Password"
+                          value={campaign?.password}
+                          onChange={(e) => setCampaign({ ...campaign, password: e.target.value })}
+                          onBlur={() => handleUpdateCampaign({ password: campaign.password })}
+                          className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Campaign Duration</label>
+                    <div className="grid grid-cols-3 gap-2">
                       {[1, 6, 12, 24, 72, 168].map((hours) => (
                         <button
                           key={hours}
-                          onClick={() => startCampaign(hours)}
-                          className="px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-sm font-bold hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-200 transition-all flex items-center justify-center"
+                          onClick={() => setSelectedDuration(hours)}
+                          className={cn(
+                            "py-2.5 border rounded-xl text-[10px] font-black transition-all uppercase tracking-tighter",
+                            selectedDuration === hours 
+                              ? "bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-100 dark:shadow-none" 
+                              : "bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-400 hover:border-blue-300"
+                          )}
                         >
-                          <Calendar size={14} className="mr-2" />
-                          {hours >= 24 ? `${hours / 24} Day${hours > 24 ? 's' : ''}` : `${hours} Hours`}
+                          {hours >= 24 ? `${hours / 24}D` : `${hours}H`}
                         </button>
                       ))}
                     </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Proxy Credentials */}
-            <div className="space-y-6">
-              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 p-6 shadow-sm h-full">
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center">
-                  <ShieldCheck className="mr-2 text-blue-600" size={20} />
-                  Proxy Credentials (Shared)
-                </h2>
-                <p className="text-xs text-gray-500 mb-6">This proxy will be shared among all users who claim the free gift.</p>
-                
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Host / IP</label>
-                      <input
-                        type="text"
-                        value={campaign?.host}
-                        onChange={(e) => setCampaign({ ...campaign, host: e.target.value })}
-                        onBlur={() => handleUpdateCampaign({ host: campaign.host })}
-                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Port</label>
-                      <input
-                        type="number"
-                        value={campaign?.port}
-                        onChange={(e) => setCampaign({ ...campaign, port: parseInt(e.target.value) || 0 })}
-                        onBlur={() => handleUpdateCampaign({ port: campaign.port })}
-                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Username</label>
-                      <input
-                        type="text"
-                        value={campaign?.username}
-                        onChange={(e) => setCampaign({ ...campaign, username: e.target.value })}
-                        onBlur={() => handleUpdateCampaign({ username: campaign.username })}
-                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Password</label>
-                      <input
-                        type="text"
-                        value={campaign?.password}
-                        onChange={(e) => setCampaign({ ...campaign, password: e.target.value })}
-                        onBlur={() => handleUpdateCampaign({ password: campaign.password })}
-                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="pt-4">
-                    <div className="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-xl border border-orange-100 dark:border-orange-900/30">
-                      <p className="text-xs text-orange-700 dark:text-orange-300 leading-relaxed">
-                        <strong>Warning:</strong> Changing these credentials will only affect new claims. Users who have already claimed will keep using the previous credentials until their trial expires.
-                      </p>
-                    </div>
+                    <p className="text-[10px] text-gray-400 mt-2 font-bold italic">* Select duration then click "Start Campaign" above.</p>
                   </div>
                 </div>
               </div>
@@ -330,36 +394,73 @@ export default function FreeProxyManager() {
           </div>
 
           {/* Claims List */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 p-6 shadow-sm">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center">
-              <Users className="mr-2 text-blue-600" size={20} />
-              Recent Claims ({claims.length})
-            </h2>
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-gray-100 dark:border-slate-800 shadow-sm overflow-hidden">
+            <div className="p-6 border-b border-gray-50 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center">
+                <UserCheck className="mr-2 text-blue-600" size={20} />
+                Live Claim Feed
+              </h2>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                <input 
+                  type="text"
+                  placeholder="Search by email..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-4 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none w-full sm:w-64"
+                />
+              </div>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left">
-                <thead className="text-xs text-gray-400 uppercase font-bold border-b border-gray-50 dark:border-slate-800">
+                <thead className="text-[10px] text-gray-400 uppercase font-black tracking-widest bg-gray-50/50 dark:bg-slate-800/50">
                   <tr>
-                    <th className="px-4 py-3">User</th>
-                    <th className="px-4 py-3">Email</th>
-                    <th className="px-4 py-3">Claimed At</th>
-                    <th className="px-4 py-3">Expires At</th>
+                    <th className="px-6 py-4">User Identity</th>
+                    <th className="px-6 py-4">Status</th>
+                    <th className="px-6 py-4">Claimed At</th>
+                    <th className="px-6 py-4">Expiry</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
-                  {claims.length > 0 ? claims.map((claim) => (
-                    <tr key={claim.id} className="text-sm">
-                      <td className="px-4 py-3 font-bold text-gray-900 dark:text-white">{claim.displayName}</td>
-                      <td className="px-4 py-3 text-gray-500">{claim.email}</td>
-                      <td className="px-4 py-3 text-gray-500">
-                        {claim.claimedAt?.toDate ? format(claim.claimedAt.toDate(), 'MMM dd, HH:mm') : 'N/A'}
-                      </td>
-                      <td className="px-4 py-3 text-gray-500">
-                        {claim.expiresAt?.toDate ? format(claim.expiresAt.toDate(), 'MMM dd, HH:mm') : 'N/A'}
-                      </td>
-                    </tr>
-                  )) : (
+                  {filteredClaims.length > 0 ? filteredClaims.map((claim) => {
+                    const isExpired = isAfter(new Date(), new Date(claim.expiryDate));
+                    return (
+                      <tr key={claim.id} className="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center font-bold text-xs">
+                              {claim.email?.[0].toUpperCase() || 'U'}
+                            </div>
+                            <div>
+                              <div className="text-sm font-bold text-gray-900 dark:text-white">{claim.displayName || 'User'}</div>
+                              <div className="text-xs text-gray-500">{claim.email}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={cn(
+                            "px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-tighter",
+                            isExpired ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"
+                          )}>
+                            {isExpired ? 'Expired' : 'Active'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-xs text-gray-500">
+                          {claim.claimedAt?.toDate ? format(claim.claimedAt.toDate(), 'MMM dd, HH:mm') : 'N/A'}
+                        </td>
+                        <td className="px-6 py-4 text-xs text-gray-500">
+                          {claim.expiryDate ? format(new Date(claim.expiryDate), 'MMM dd, HH:mm') : 'N/A'}
+                        </td>
+                      </tr>
+                    );
+                  }) : (
                     <tr>
-                      <td colSpan={4} className="px-4 py-8 text-center text-gray-400">No claims yet.</td>
+                      <td colSpan={4} className="px-6 py-12 text-center text-gray-400">
+                        <div className="flex flex-col items-center">
+                          <Users size={32} className="mb-2 opacity-20" />
+                          <p className="text-sm font-bold">No claims found matching your search.</p>
+                        </div>
+                      </td>
                     </tr>
                   )}
                 </tbody>
@@ -371,44 +472,53 @@ export default function FreeProxyManager() {
         {/* Right Column: History & Maintenance */}
         <div className="space-y-8">
           {/* Campaign History */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 p-6 shadow-sm">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center">
-              <HistoryIcon className="mr-2 text-blue-600" size={20} />
-              Campaign History
-            </h2>
-            <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-slate-800">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-gray-100 dark:border-slate-800 shadow-sm overflow-hidden">
+            <div className="p-6 border-b border-gray-50 dark:border-slate-800 flex items-center justify-between bg-gray-50/50 dark:bg-slate-800/50">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center">
+                <HistoryIcon className="mr-2 text-blue-600" size={20} />
+                Deployment History
+              </h2>
+            </div>
+            <div className="p-6 space-y-4 max-h-[600px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-slate-800">
               {history.length > 0 ? history.map((h) => (
-                <div key={h.id} className="p-4 bg-gray-50 dark:bg-slate-800/50 rounded-xl border border-gray-100 dark:border-slate-800">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-blue-600 dark:text-blue-400">{format(h.savedAt, 'MMM dd, yyyy')}</span>
+                <div key={h.id} className="group p-5 bg-gray-50 dark:bg-slate-800/50 rounded-2xl border border-gray-100 dark:border-slate-800 hover:border-blue-200 dark:hover:border-blue-900/50 transition-all">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">
+                      {format(h.savedAt, 'MMM dd, yyyy')}
+                    </span>
                     <button 
                       onClick={() => reuseCampaign(h)}
-                      className="p-1.5 bg-white dark:bg-slate-800 text-gray-400 hover:text-blue-600 rounded-lg border border-gray-100 dark:border-slate-700 transition-all"
+                      className="p-2 bg-white dark:bg-slate-800 text-gray-400 hover:text-blue-600 hover:scale-110 rounded-xl border border-gray-100 dark:border-slate-700 transition-all shadow-sm"
                       title="Reuse Settings"
                     >
-                      <RotateCcw size={14} />
+                      <RotateCcw size={16} />
                     </button>
                   </div>
-                  <div className="text-sm font-bold text-gray-900 dark:text-white mb-1 truncate">{h.title}</div>
-                  <div className="text-[10px] text-gray-500 mb-2">{h.host}:{h.port}</div>
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400 rounded text-[9px] font-bold uppercase">{h.proxyType}</span>
-                    <span className="px-2 py-0.5 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400 rounded text-[9px] font-bold uppercase">{h.speed}</span>
+                  <div className="text-sm font-black text-gray-900 dark:text-white mb-2 group-hover:text-blue-600 transition-colors">{h.title}</div>
+                  <div className="flex items-center space-x-2 mb-4">
+                    <span className="px-2 py-0.5 bg-white dark:bg-slate-900 text-gray-500 rounded text-[9px] font-bold border border-gray-100 dark:border-slate-700 uppercase">{h.proxyType}</span>
+                    <span className="px-2 py-0.5 bg-white dark:bg-slate-900 text-gray-500 rounded text-[9px] font-bold border border-gray-100 dark:border-slate-700 uppercase">{h.speed}</span>
+                  </div>
+                  <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-slate-700 text-[10px] font-mono text-gray-400">
+                    {h.host}:{h.port}
                   </div>
                 </div>
               )) : (
-                <p className="text-center text-gray-400 py-4 text-sm">No history yet.</p>
+                <div className="text-center py-12">
+                  <HistoryIcon size={32} className="mx-auto mb-2 opacity-10" />
+                  <p className="text-sm text-gray-400 font-bold">No history records yet.</p>
+                </div>
               )}
             </div>
           </div>
 
           {/* Maintenance Section */}
-          <div className="bg-red-50 dark:bg-red-900/10 rounded-2xl border border-red-100 dark:border-red-900/20 p-6">
-            <h2 className="text-lg font-bold text-red-700 dark:text-red-400 mb-4 flex items-center">
+          <div className="bg-red-50 dark:bg-red-900/10 rounded-3xl border border-red-100 dark:border-red-900/20 p-8">
+            <h2 className="text-lg font-bold text-red-700 dark:text-red-400 mb-6 flex items-center">
               <Trash2 className="mr-2" size={20} />
-              System Maintenance
+              Danger Zone
             </h2>
-            <div className="space-y-3">
+            <div className="space-y-4">
               <button
                 onClick={async () => {
                   if (confirm('Are you sure you want to delete ALL previous orders? This cannot be undone.')) {
@@ -421,7 +531,7 @@ export default function FreeProxyManager() {
                     }
                   }
                 }}
-                className="w-full px-4 py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-all flex items-center justify-center"
+                className="w-full px-6 py-4 bg-red-600 text-white font-black text-sm rounded-2xl hover:bg-red-700 transition-all shadow-lg shadow-red-100 dark:shadow-none uppercase tracking-widest"
               >
                 Clear All Orders
               </button>
@@ -437,9 +547,9 @@ export default function FreeProxyManager() {
                     }
                   }
                 }}
-                className="w-full px-4 py-3 bg-white dark:bg-slate-800 text-red-600 border border-red-200 dark:border-red-900/30 font-bold rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-all flex items-center justify-center"
+                className="w-full px-6 py-4 bg-white dark:bg-slate-800 text-red-600 border border-red-200 dark:border-red-900/30 font-black text-sm rounded-2xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-all uppercase tracking-widest"
               >
-                Clear Proxy Assignments
+                Reset Inventory
               </button>
             </div>
           </div>

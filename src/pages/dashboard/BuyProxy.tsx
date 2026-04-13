@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../App';
-import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc, increment, onSnapshot } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { toast } from 'react-hot-toast';
-import { ShoppingCart, Zap, Globe, Clock, ShieldCheck, Tag, TrendingDown, Check, AlertTriangle } from 'lucide-react';
+import { ShoppingCart, Zap, Globe, Clock, ShieldCheck, Tag, TrendingDown, Check, AlertTriangle, Server } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { logActivity } from '../../services/activityService';
@@ -33,11 +33,24 @@ const DURATIONS = [
 export default function BuyProxy() {
   const { profile } = useAuth();
   const navigate = useNavigate();
+  const [servers, setServers] = useState<any[]>([]);
+  const [selectedServer, setSelectedServer] = useState<any>(null);
   const [selectedType, setSelectedType] = useState(PROXY_TYPES[0]);
   const [selectedSpeed, setSelectedSpeed] = useState(SPEEDS[0]);
   const [selectedDuration, setSelectedDuration] = useState(DURATIONS[1]);
   const [loading, setLoading] = useState(false);
   const [availableCount, setAvailableCount] = useState(0);
+
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'proxyServers'), (snap) => {
+      const serverList = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setServers(serverList);
+      if (serverList.length > 0 && !selectedServer) {
+        setSelectedServer(serverList[0]);
+      }
+    });
+    return () => unsub();
+  }, []);
 
   // Calculate prices
   const baseTotal = selectedSpeed.basePrice * selectedDuration.multiplier;
@@ -47,15 +60,17 @@ export default function BuyProxy() {
 
   useEffect(() => {
     fetchAvailableCount();
-  }, [selectedSpeed, selectedType]);
+  }, [selectedSpeed, selectedType, selectedServer]);
 
   const fetchAvailableCount = async () => {
+    if (!selectedServer) return;
     try {
       const q = query(
         collection(db, 'proxyInventory'),
         where('isAssigned', '==', false),
         where('speed', '==', selectedSpeed.id),
-        where('type', '==', selectedType.id)
+        where('type', '==', selectedType.id),
+        where('serverId', '==', selectedServer.id)
       );
       const snap = await getDocs(q);
       setAvailableCount(snap.size);
@@ -65,7 +80,7 @@ export default function BuyProxy() {
   };
 
   const handlePurchase = async () => {
-    if (!profile) return;
+    if (!profile || !selectedServer) return;
     if (profile.walletBalance < finalPrice) {
       toast.error('Insufficient balance. Please add balance first.');
       navigate('/dashboard/add-balance');
@@ -74,17 +89,18 @@ export default function BuyProxy() {
 
     setLoading(true);
     try {
-      // 1. Get an available proxy with matching speed and type
+      // 1. Get an available proxy with matching speed, type and server
       const q = query(
         collection(db, 'proxyInventory'),
         where('isAssigned', '==', false),
         where('speed', '==', selectedSpeed.id),
-        where('type', '==', selectedType.id)
+        where('type', '==', selectedType.id),
+        where('serverId', '==', selectedServer.id)
       );
       const snap = await getDocs(q);
       
       if (snap.empty) {
-        throw new Error(`No ${selectedType.label} ${selectedSpeed.label} proxies available at the moment.`);
+        throw new Error(`No ${selectedType.label} ${selectedSpeed.label} proxies available on ${selectedServer.name} at the moment.`);
       }
       
       const proxyDoc = snap.docs[0];
@@ -187,11 +203,55 @@ export default function BuyProxy() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Side: Customizer */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Server Selection */}
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm">
+            <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <Server size={16} className="text-blue-500" />
+              1. Select Server Location
+            </h2>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {servers.map((server) => (
+                <button
+                  key={server.id}
+                  onClick={() => setSelectedServer(server)}
+                  className={cn(
+                    "p-4 rounded-xl border-2 transition-all text-left flex items-center gap-3",
+                    selectedServer?.id === server.id
+                      ? "border-blue-600 bg-blue-50 dark:bg-blue-900/20"
+                      : "border-gray-100 dark:border-slate-800 hover:border-gray-200 dark:hover:border-slate-700"
+                  )}
+                >
+                  <div className={cn(
+                    "w-10 h-10 rounded-lg flex items-center justify-center",
+                    selectedServer?.id === server.id ? "bg-blue-600 text-white" : "bg-gray-100 dark:bg-slate-800 text-gray-400"
+                  )}>
+                    <Globe size={20} />
+                  </div>
+                  <div>
+                    <div className={cn(
+                      "font-bold text-sm",
+                      selectedServer?.id === server.id ? "text-blue-600 dark:text-blue-400" : "text-gray-900 dark:text-white"
+                    )}>
+                      {server.name}
+                    </div>
+                    <div className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">{server.location}</div>
+                  </div>
+                </button>
+              ))}
+              {servers.length === 0 && (
+                <div className="col-span-full py-8 text-center text-gray-400 text-sm font-medium">
+                  No servers available. Please contact support.
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Proxy Type Selection */}
           <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm">
             <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
               <ShieldCheck size={16} className="text-blue-500" />
-              1. Select Proxy Type
+              2. Select Proxy Type
             </h2>
             
             {/* Mobile Dropdown */}
@@ -241,7 +301,7 @@ export default function BuyProxy() {
           <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm">
             <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
               <Zap size={16} className="text-yellow-500" />
-              2. Select Speed
+              3. Select Speed
             </h2>
 
             {/* Mobile Dropdown */}
@@ -286,7 +346,7 @@ export default function BuyProxy() {
           <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm">
             <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
               <Clock size={16} className="text-blue-500" />
-              3. Select Duration
+              4. Select Duration
             </h2>
 
             {/* Mobile Dropdown */}
@@ -360,6 +420,10 @@ export default function BuyProxy() {
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Order Summary</h2>
             
             <div className="space-y-4 mb-8">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Server</span>
+                <span className="font-bold text-gray-900 dark:text-white">{selectedServer?.name || 'Not selected'}</span>
+              </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Proxy Type</span>
                 <span className="font-bold text-gray-900 dark:text-white">{selectedType.label}</span>

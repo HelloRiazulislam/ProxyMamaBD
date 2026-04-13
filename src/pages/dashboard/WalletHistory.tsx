@@ -21,7 +21,11 @@ export default function WalletHistory() {
     );
 
     const unsub = onSnapshot(q, (snap) => {
-      setTransactions(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setTransactions(snap.docs.map(doc => ({ 
+        id: doc.id, 
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate ? doc.data().createdAt : { toDate: () => new Date() }
+      })));
       setLoading(false);
     });
 

@@ -16,6 +16,7 @@ import {
   Settings,
   Menu,
   X,
+  Server,
   Ticket,
   Gift,
   MessageSquare,
@@ -144,6 +145,7 @@ export default function Sidebar({ role }: SidebarProps) {
   const adminLinks = [
     { name: 'Dashboard', icon: LayoutDashboard, path: '/admin' },
     { name: 'Users', icon: Users, path: '/admin/users' },
+    { name: 'Proxy Servers', icon: Server, path: '/admin/proxy-servers' },
     { name: 'Proxy Inventory', icon: Database, path: '/admin/proxy-inventory' },
     { name: 'Proxy Tracking', icon: Search, path: '/admin/proxy-tracking' },
     { name: 'Balance Requests', icon: CreditCard, path: '/admin/balance-requests', badge: pendingBalanceCount },

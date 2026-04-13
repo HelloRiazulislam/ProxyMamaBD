@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { ShoppingCart, Search, Filter, ExternalLink } from 'lucide-react';
+import { ShoppingCart, Search, Filter, ExternalLink, Trash2, AlertCircle } from 'lucide-react';
 import { format, differenceInHours } from 'date-fns';
 import { cn } from '../../lib/utils';
-import { AlertCircle } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 export default function AdminOrders() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -32,6 +32,16 @@ export default function AdminOrders() {
     order.uid.toLowerCase().includes(search.toLowerCase()) ||
     order.planTitle.toLowerCase().includes(search.toLowerCase())
   );
+
+  const handleDeleteOrder = async (orderId: string) => {
+    if (!confirm('Are you sure you want to delete this order record? This cannot be undone.')) return;
+    try {
+      await deleteDoc(doc(db, 'orders', orderId));
+      toast.success('Order record deleted');
+    } catch (error: any) {
+      toast.error('Failed to delete order');
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -63,6 +73,7 @@ export default function AdminOrders() {
                 <th className="px-6 py-4 overflow-hidden resize-x border-r border-gray-100 min-w-[100px] whitespace-nowrap">Amount</th>
                 <th className="px-6 py-4 overflow-hidden resize-x border-r border-gray-100 min-w-[150px] whitespace-nowrap">Date</th>
                 <th className="px-6 py-4 overflow-hidden resize-x border-r border-gray-100 min-w-[100px] whitespace-nowrap">Status</th>
+                <th className="px-6 py-4 text-right w-[100px] whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -90,6 +101,15 @@ export default function AdminOrders() {
                           </span>
                         )}
                       </div>
+                    </td>
+                    <td className="px-6 py-4 text-right whitespace-nowrap">
+                      <button
+                        onClick={() => handleDeleteOrder(order.id)}
+                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                        title="Delete Order Record"
+                      >
+                        <Trash2 size={18} />
+                      </button>
                     </td>
                   </tr>
                 ))

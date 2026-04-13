@@ -485,7 +485,12 @@ export const claimFreeProxy = async (uid: string) => {
         throw new Error('Campaign has already expired.');
       }
 
-      // 2. Check if user already claimed during THIS campaign window
+      // 2. Get User Info
+      const userRef = doc(db, 'users', uid);
+      const userSnap = await transaction.get(userRef);
+      const userData = userSnap.exists() ? userSnap.data() : { email: 'Unknown', displayName: 'User' };
+
+      // 3. Check if user already claimed during THIS campaign window
       // If no window set, check for today
       const windowStart = campaign.startTime ? campaign.startTime.toDate() : new Date();
       if (!campaign.startTime) windowStart.setHours(0, 0, 0, 0);
@@ -513,6 +518,8 @@ export const claimFreeProxy = async (uid: string) => {
         password: campaign.password,
         type: campaign.proxyType,
         speed: campaign.speed,
+        email: userData.email,
+        displayName: userData.displayName,
         planTitle: `Free Trial`,
         claimedAt: serverTimestamp(),
         expiryDate: expiryDate

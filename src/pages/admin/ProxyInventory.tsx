@@ -10,6 +10,7 @@ import Papa from 'papaparse';
 export default function ProxyInventory() {
   const [inventory, setInventory] = useState<any[]>([]);
   const [plans, setPlans] = useState<any[]>([]);
+  const [servers, setServers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -25,7 +26,8 @@ export default function ProxyInventory() {
     status: 'available',
     location: 'Bangladesh',
     type: 'SOCKS5',
-    speed: '50mbps'
+    speed: '50mbps',
+    serverId: ''
   });
   const [bulkInput, setBulkInput] = useState('');
   const [isBulkMode, setIsBulkMode] = useState(false);
@@ -41,9 +43,14 @@ export default function ProxyInventory() {
       setPlans(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
 
+    const unsubServers = onSnapshot(collection(db, 'proxyServers'), (snap) => {
+      setServers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
     return () => {
       unsubInv();
       unsubPlans();
+      unsubServers();
     };
   }, []);
 
@@ -90,6 +97,7 @@ export default function ProxyInventory() {
             location: formData.location,
             type: formData.type,
             speed: formData.speed,
+            serverId: formData.serverId,
             isAssigned: false,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp()
@@ -135,7 +143,8 @@ export default function ProxyInventory() {
       status: 'available',
       location: 'Bangladesh',
       type: 'SOCKS5',
-      speed: '50mbps'
+      speed: '50mbps',
+      serverId: ''
     });
     setBulkInput('');
     setIsBulkMode(false);
@@ -152,7 +161,8 @@ export default function ProxyInventory() {
       status: item.status,
       location: item.location,
       type: item.type,
-      speed: item.speed || '50mbps'
+      speed: item.speed || '50mbps',
+      serverId: item.serverId || ''
     });
     setIsModalOpen(true);
   };
@@ -320,6 +330,7 @@ export default function ProxyInventory() {
           <table className="w-full text-left border-collapse relative">
             <thead className="bg-gray-50 text-xs text-gray-500 uppercase font-bold sticky top-0 z-10">
               <tr>
+                <th className="px-6 py-4 overflow-hidden resize-x border-r border-gray-100 min-w-[150px] whitespace-nowrap">Server</th>
                 <th className="px-6 py-4 overflow-hidden resize-x border-r border-gray-100 min-w-[150px] whitespace-nowrap">Host:Port</th>
                 <th className="px-6 py-4 overflow-hidden resize-x border-r border-gray-100 min-w-[150px] whitespace-nowrap">Credentials</th>
                 <th className="px-6 py-4 overflow-hidden resize-x border-r border-gray-100 min-w-[100px] whitespace-nowrap">Type</th>
@@ -335,6 +346,11 @@ export default function ProxyInventory() {
               ) : filteredInventory.length > 0 ? (
                 filteredInventory.map((item) => (
                   <tr key={item.id} className="hover:bg-gray-50 transition-colors text-sm">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-xs font-bold text-blue-600">
+                        {servers.find(s => s.id === item.serverId)?.name || 'Unknown Server'}
+                      </span>
+                    </td>
                     <td className="px-6 py-4 font-mono text-xs text-gray-900 whitespace-nowrap">{item.host}:{item.port}</td>
                     <td className="px-6 py-4 text-gray-600 whitespace-nowrap">{item.username}:{item.password}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -423,8 +439,36 @@ export default function ProxyInventory() {
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
-              <div className="grid grid-cols-3 gap-6">
-                <div className="col-span-1">
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Select Server</label>
+                  <select
+                    required
+                    value={formData.serverId}
+                    onChange={(e) => setFormData({ ...formData, serverId: e.target.value })}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                  >
+                    <option value="">Choose a Server</option>
+                    {servers.map(s => (
+                      <option key={s.id} value={s.id}>{s.name} ({s.location})</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                  >
+                    <option value="available">Available</option>
+                    <option value="sold">Sold</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Speed</label>
                   <select
                     value={formData.speed}
@@ -436,7 +480,7 @@ export default function ProxyInventory() {
                     <option value="150mbps">150 Mbps</option>
                   </select>
                 </div>
-                <div className="col-span-1">
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Protocol</label>
                   <select
                     value={formData.type}
@@ -449,17 +493,6 @@ export default function ProxyInventory() {
                     <option value="PPTP">PPTP</option>
                     <option value="Wireguard">Wireguard</option>
                     <option value="OpenVPN">OpenVPN</option>
-                  </select>
-                </div>
-                <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                  >
-                    <option value="available">Available</option>
-                    <option value="sold">Sold</option>
                   </select>
                 </div>
               </div>

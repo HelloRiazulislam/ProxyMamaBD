@@ -409,7 +409,14 @@ export const getFreeProxyCampaign = async () => {
     const q = query(collection(db, 'freeProxyCampaign'), limit(1));
     const snap = await getDocs(q);
     if (snap.empty) return null;
-    return { id: snap.docs[0].id, ...snap.docs[0].data() };
+    const data = snap.docs[0].data();
+    return { 
+      id: snap.docs[0].id, 
+      ...data,
+      startTime: data.startTime?.toDate?.() || data.startTime,
+      endTime: data.endTime?.toDate?.() || data.endTime,
+      updatedAt: data.updatedAt?.toDate?.() || data.updatedAt
+    };
   } catch (error) {
     handleFirestoreError(error, OperationType.GET, 'freeProxyCampaign');
   }
@@ -418,7 +425,13 @@ export const getFreeProxyCampaign = async () => {
 export const updateFreeProxyCampaign = async (id: string, data: any) => {
   try {
     const campaignRef = doc(db, 'freeProxyCampaign', id);
-    await updateDoc(campaignRef, { ...data, updatedAt: serverTimestamp() });
+    const updateData = { ...data, updatedAt: serverTimestamp() };
+    
+    // Convert JS Dates to Firestore Timestamps if present
+    if (data.startTime instanceof Date) updateData.startTime = data.startTime;
+    if (data.endTime instanceof Date) updateData.endTime = data.endTime;
+    
+    await updateDoc(campaignRef, updateData);
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, `freeProxyCampaign/${id}`);
   }
@@ -427,34 +440,42 @@ export const updateFreeProxyCampaign = async (id: string, data: any) => {
 export const claimFreeProxy = async (uid: string) => {
   try {
     return await runTransaction(db, async (transaction) => {
-      // 1. Check if user already claimed today
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      // 1. Get Campaign Settings
+      const campaignQ = query(collection(db, 'freeProxyCampaign'), limit(1));
+      const campaignSnap = await getDocs(campaignQ);
+      if (campaignSnap.empty) throw new Error('Free proxy campaign not found.');
+      
+      const campaign = campaignSnap.docs[0].data();
+      const now = new Date();
+      
+      if (!campaign.isActive) {
+        throw new Error('Free proxy campaign is currently inactive.');
+      }
+
+      // Check campaign window if set
+      if (campaign.startTime && now < campaign.startTime.toDate()) {
+        throw new Error('Campaign has not started yet.');
+      }
+      if (campaign.endTime && now > campaign.endTime.toDate()) {
+        throw new Error('Campaign has already expired.');
+      }
+
+      // 2. Check if user already claimed during THIS campaign window
+      // If no window set, check for today
+      const windowStart = campaign.startTime ? campaign.startTime.toDate() : new Date();
+      if (!campaign.startTime) windowStart.setHours(0, 0, 0, 0);
       
       const claimsQ = query(
         collection(db, 'freeProxyClaims'),
         where('uid', '==', uid),
-        where('claimedAt', '>=', today)
+        where('claimedAt', '>=', windowStart)
       );
       const claimsSnap = await getDocs(claimsQ);
-      if (!claimsSnap.empty) throw new Error('You have already claimed your free proxy for today.');
+      if (!claimsSnap.empty) throw new Error('You have already claimed your free proxy for this campaign.');
 
-      // 2. Get Campaign Settings
-      const campaignQ = query(collection(db, 'freeProxyCampaign'), limit(1));
-      const campaignSnap = await getDocs(campaignQ);
-      if (campaignSnap.empty || !campaignSnap.docs[0].data().isActive) {
-        throw new Error('Free proxy campaign is currently inactive.');
-      }
-      const campaign = campaignSnap.docs[0].data();
-
-      // 3. Calculate Expiry
-      const expiryDate = new Date();
-      const validity = campaign.validity || '2h';
-      if (validity === '2h') expiryDate.setHours(expiryDate.getHours() + 2);
-      else if (validity === '1d') expiryDate.setDate(expiryDate.getDate() + 1);
-      else if (validity === '3d') expiryDate.setDate(expiryDate.getDate() + 3);
-      else if (validity === '7d') expiryDate.setDate(expiryDate.getDate() + 7);
-      else if (validity === '50d') expiryDate.setDate(expiryDate.getDate() + 50);
+      // 3. Calculate Expiry - Strictly tied to Campaign End Time
+      // No matter when the user claims, it expires when the campaign ends.
+      const expiryDate = campaign.endTime.toDate().toISOString();
 
       // 4. Create Claim Record with Proxy Details
       const claimRef = doc(collection(db, 'freeProxyClaims'));
@@ -467,9 +488,9 @@ export const claimFreeProxy = async (uid: string) => {
         password: campaign.password,
         type: campaign.proxyType,
         speed: campaign.speed,
-        planTitle: `Free Trial (${validity})`,
+        planTitle: `Free Trial`,
         claimedAt: serverTimestamp(),
-        expiryDate: expiryDate.toISOString()
+        expiryDate: expiryDate
       });
 
       // 5. Create Notification
@@ -477,7 +498,7 @@ export const claimFreeProxy = async (uid: string) => {
       transaction.set(notificationRef, {
         uid,
         title: 'Free Proxy Claimed! 🎁',
-        message: `You have successfully claimed a ${validity} free proxy trial. Enjoy!`,
+        message: `You have successfully claimed your free proxy trial. Enjoy!`,
         isRead: false,
         createdAt: serverTimestamp()
       });
@@ -512,6 +533,16 @@ export const checkExpiredFreeProxies = async () => {
   }
 };
 
+// User: Update Profile Data
+export const updateProfileData = async (uid: string, data: Partial<any>) => {
+  try {
+    const userRef = doc(db, 'users', uid);
+    return await updateDoc(userRef, data);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `users/${uid}`);
+  }
+};
+
 // User: Update Profile Picture
 export const updateProfilePicture = async (uid: string, photoURL: string) => {
   try {
@@ -522,13 +553,39 @@ export const updateProfilePicture = async (uid: string, photoURL: string) => {
   }
 };
 
-// User: Update Profile Data
-export const updateProfileData = async (uid: string, data: Partial<any>) => {
+// Admin: Clear All Orders (Maintenance)
+export const clearAllOrders = async () => {
   try {
-    const userRef = doc(db, 'users', uid);
-    return await updateDoc(userRef, data);
+    const q = query(collection(db, 'orders'));
+    const snap = await getDocs(q);
+    const batch = writeBatch(db);
+    snap.docs.forEach(d => batch.delete(d.ref));
+    await batch.commit();
+    await logActivity('admin_maintenance', 'Admin cleared all orders from the system', { uid: auth.currentUser?.uid });
   } catch (error) {
-    handleFirestoreError(error, OperationType.UPDATE, `users/${uid}`);
+    handleFirestoreError(error, OperationType.DELETE, 'orders');
+  }
+};
+
+// Admin: Clear All Proxy Assignments (Maintenance)
+export const clearAllProxyAssignments = async () => {
+  try {
+    const q = query(collection(db, 'proxyInventory'), where('isAssigned', '==', true));
+    const snap = await getDocs(q);
+    const batch = writeBatch(db);
+    snap.docs.forEach(d => {
+      batch.update(d.ref, {
+        isAssigned: false,
+        assignedToUid: null,
+        status: 'available',
+        orderId: null,
+        expiryDate: null
+      });
+    });
+    await batch.commit();
+    await logActivity('admin_maintenance', 'Admin cleared all proxy assignments', { uid: auth.currentUser?.uid });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, 'proxyInventory');
   }
 };
 

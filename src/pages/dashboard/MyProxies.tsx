@@ -41,6 +41,8 @@ export default function MyProxies() {
       setProxies(prev => {
         const others = prev.filter(p => p.collection !== 'proxyInventory');
         return [...others, ...p1].sort((a, b) => {
+          if (a.collection === 'freeProxyClaims' && b.collection !== 'freeProxyClaims') return -1;
+          if (a.collection !== 'freeProxyClaims' && b.collection === 'freeProxyClaims') return 1;
           const dateA = a.assignedAt?.toDate ? a.assignedAt.toDate().getTime() : new Date(a.assignedAt || 0).getTime();
           const dateB = b.assignedAt?.toDate ? b.assignedAt.toDate().getTime() : new Date(b.assignedAt || 0).getTime();
           return dateB - dateA;
@@ -54,6 +56,8 @@ export default function MyProxies() {
       setProxies(prev => {
         const others = prev.filter(p => p.collection !== 'freeProxyClaims');
         return [...others, ...p2].sort((a, b) => {
+          if (a.collection === 'freeProxyClaims' && b.collection !== 'freeProxyClaims') return -1;
+          if (a.collection !== 'freeProxyClaims' && b.collection === 'freeProxyClaims') return 1;
           const dateA = a.assignedAt?.toDate ? a.assignedAt.toDate().getTime() : 
                         a.claimedAt?.toDate ? a.claimedAt.toDate().getTime() : new Date(a.assignedAt || a.claimedAt || 0).getTime();
           const dateB = b.assignedAt?.toDate ? b.assignedAt.toDate().getTime() : 

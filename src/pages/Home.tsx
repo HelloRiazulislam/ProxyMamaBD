@@ -29,13 +29,11 @@ export default function Home() {
       <section className="relative pt-32 md:pt-56 pb-24 md:pb-48 overflow-hidden">
         {/* Abstract Background Elements */}
         <div className="absolute inset-0 -z-10 overflow-hidden">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-blue-500/5 via-transparent to-transparent" />
-          <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[120px] animate-pulse" />
-          <div className="absolute bottom-[-10%] left-[-5%] w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[120px] animate-pulse" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-blue-600/10 via-transparent to-transparent" />
+          <div className="absolute top-[-10%] right-[-5%] w-[600px] h-[600px] bg-blue-600/5 rounded-full blur-[120px]" />
           
           {/* Grid Pattern */}
-          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150 pointer-events-none" />
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:40px_40px]" />
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -44,20 +42,20 @@ export default function Home() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
-              className="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 text-[10px] font-bold uppercase tracking-[0.25em] mb-10"
+              className="inline-flex items-center space-x-2 px-4 py-2 rounded-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em] mb-12"
             >
-              <Activity size={12} className="mr-1" />
-              <span>Reliable Proxy Network</span>
+              <Activity size={12} className="text-blue-600" />
+              <span>Enterprise Grade Proxy Network</span>
             </motion.div>
 
             <motion.h1 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.1 }}
-              className="text-5xl md:text-9xl font-black text-slate-950 dark:text-white tracking-tight leading-[0.95] mb-10"
+              className="text-6xl md:text-[10rem] font-black text-slate-950 dark:text-white tracking-tight leading-[0.9] mb-12"
             >
-              Fast & Reliable <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
+              High Performance <br />
+              <span className="text-blue-600">
                 BD Proxies
               </span>
             </motion.h1>
@@ -66,10 +64,10 @@ export default function Home() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
-              className="text-lg md:text-2xl text-slate-500 dark:text-slate-400 max-w-3xl mx-auto mb-14 leading-relaxed font-medium"
+              className="text-xl md:text-2xl text-slate-500 dark:text-slate-400 max-w-3xl mx-auto mb-16 leading-relaxed font-medium"
             >
-              The simplest way to get high-quality residential and datacenter proxies 
-              in Bangladesh. Secure, fast, and easy to use.
+              Premium residential and datacenter proxies in Bangladesh. 
+              Built for speed, security, and absolute reliability.
             </motion.p>
 
             <motion.div 
@@ -80,14 +78,14 @@ export default function Home() {
             >
               <Link
                 to="/register"
-                className="w-full sm:w-auto px-12 py-6 bg-blue-600 text-white font-black rounded-2xl hover:bg-blue-700 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-2xl shadow-blue-500/20 flex items-center justify-center text-lg group"
+                className="w-full sm:w-auto px-14 py-7 bg-blue-600 text-white font-black rounded-2xl hover:bg-blue-700 hover:shadow-xl hover:shadow-blue-500/20 transition-all flex items-center justify-center text-xl group"
               >
-                Start Now
-                <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" size={22} />
+                Get Started
+                <ArrowRight className="ml-3 group-hover:translate-x-1 transition-transform" size={24} />
               </Link>
               <Link
                 to="/downloads"
-                className="w-full sm:w-auto px-12 py-6 bg-white dark:bg-slate-900/50 text-slate-900 dark:text-white font-black rounded-2xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all flex items-center justify-center text-lg shadow-sm"
+                className="w-full sm:w-auto px-14 py-7 bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-black rounded-2xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all flex items-center justify-center text-xl shadow-sm"
               >
                 Download App
               </Link>
@@ -112,11 +110,11 @@ export default function Home() {
       <section className="py-32 md:py-56">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-24">
-            <h2 className="text-4xl md:text-6xl font-black text-slate-950 dark:text-white tracking-tight mb-6">
-              Why Choose <span className="text-blue-600">Us?</span>
+            <h2 className="text-4xl md:text-7xl font-black text-slate-950 dark:text-white tracking-tight mb-6">
+              Engineered for <span className="text-blue-600">Performance</span>
             </h2>
-            <p className="text-lg text-slate-500 dark:text-slate-400 max-w-2xl mx-auto font-medium">
-              We provide the best proxy solutions for your business and personal needs.
+            <p className="text-xl text-slate-500 dark:text-slate-400 max-w-2xl mx-auto font-medium">
+              We provide the most reliable proxy infrastructure in Bangladesh.
             </p>
           </div>
 
@@ -132,21 +130,19 @@ export default function Home() {
                 <div className="w-14 h-14 rounded-2xl bg-blue-600 text-white flex items-center justify-center mb-8 shadow-lg shadow-blue-500/20">
                   <Zap size={28} />
                 </div>
-                <h3 className="text-3xl font-black text-slate-950 dark:text-white mb-6">Super Fast Speed</h3>
+                <h3 className="text-3xl font-black text-slate-950 dark:text-white mb-6">Ultra-Low Latency</h3>
                 <p className="text-slate-500 dark:text-slate-400 text-lg leading-relaxed font-medium mb-8">
-                  Enjoy high-speed internet with our optimized network. 
-                  Perfect for browsing, streaming, and automation.
+                  Our network is optimized for the lowest possible latency within Bangladesh and beyond.
                 </p>
                 <ul className="space-y-3">
-                  {['Unlimited Bandwidth', '99.9% Uptime', 'Fast Response'].map((item, i) => (
+                  {['1Gbps Uplink', '99.99% Uptime', 'Instant Activation'].map((item, i) => (
                     <li key={i} className="flex items-center text-sm font-bold text-slate-700 dark:text-slate-300">
                       <Check size={16} className="mr-2 text-blue-600" /> {item}
                     </li>
                   ))}
                 </ul>
               </div>
-              <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-blue-500/5 to-transparent -z-10" />
-              <div className="absolute -right-20 -bottom-20 w-80 h-80 bg-blue-600/10 rounded-full blur-[100px] group-hover:scale-110 transition-transform duration-700" />
+              <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-blue-600/5 to-transparent -z-10" />
             </motion.div>
 
             {/* Small Feature */}
@@ -158,15 +154,15 @@ export default function Home() {
               className="md:col-span-4 bg-slate-950 p-10 rounded-[3rem] text-white flex flex-col justify-between relative overflow-hidden"
             >
               <div className="relative z-10">
-                <div className="w-12 h-12 rounded-2xl bg-white/10 text-white flex items-center justify-center mb-8 backdrop-blur-md">
+                <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center mb-8">
                   <Lock size={24} />
                 </div>
                 <h3 className="text-2xl font-black mb-4">Secure & Private</h3>
                 <p className="text-slate-400 leading-relaxed font-medium">
-                  Your privacy is our priority. We ensure your data and identity stay safe.
+                  Military-grade encryption for all your proxy traffic.
                 </p>
               </div>
-              <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-blue-500/20 via-transparent to-transparent" />
+              <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-blue-600/20 via-transparent to-transparent" />
             </motion.div>
 
             {/* Small Feature */}
@@ -178,12 +174,12 @@ export default function Home() {
               className="md:col-span-4 bg-white dark:bg-slate-900/40 p-10 rounded-[3rem] border border-slate-100 dark:border-slate-800 flex flex-col justify-between"
             >
               <div>
-                <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-8">
+                <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-blue-600 flex items-center justify-center mb-8">
                   <Terminal size={24} />
                 </div>
-                <h3 className="text-2xl font-black text-slate-950 dark:text-white mb-4">Easy to Use</h3>
+                <h3 className="text-2xl font-black text-slate-950 dark:text-white mb-4">Developer Friendly</h3>
                 <p className="text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
-                  Simple setup process. Get your proxies running in just a few clicks.
+                  Robust API and documentation for seamless integration.
                 </p>
               </div>
             </motion.div>
@@ -201,26 +197,25 @@ export default function Home() {
                   <div className="w-14 h-14 rounded-2xl bg-white/20 text-white flex items-center justify-center mb-8 backdrop-blur-md">
                     <Globe size={28} />
                   </div>
-                  <h3 className="text-3xl font-black mb-6">Real User IPs</h3>
+                  <h3 className="text-3xl font-black mb-6">Residential Network</h3>
                   <p className="text-blue-100 text-lg leading-relaxed font-medium">
-                    Access real residential IPs from Bangladesh for better success rates.
+                    Access real residential IPs from major ISPs in Bangladesh.
                   </p>
                 </div>
                 <div className="flex-1 grid grid-cols-2 gap-4">
                   {[
-                    { label: 'Success', value: '99%' },
-                    { label: 'Latency', value: 'Low' },
-                    { label: 'Rotation', value: 'Auto' },
+                    { label: 'Success', value: '99.9%' },
+                    { label: 'Latency', value: '< 20ms' },
+                    { label: 'Rotation', value: 'Flexible' },
                     { label: 'Support', value: '24/7' },
                   ].map((stat, i) => (
                     <div key={i} className="p-4 bg-white/10 rounded-2xl backdrop-blur-md border border-white/10">
-                      <div className="text-xs font-bold text-blue-200 uppercase tracking-widest mb-1">{stat.label}</div>
+                      <div className="text-[10px] font-bold text-blue-200 uppercase tracking-widest mb-1">{stat.label}</div>
                       <div className="text-xl font-black">{stat.value}</div>
                     </div>
                   ))}
                 </div>
               </div>
-              <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_bottom_left,_var(--tw-gradient-stops))] from-white/10 via-transparent to-transparent" />
             </motion.div>
           </div>
         </div>
@@ -297,24 +292,24 @@ export default function Home() {
       <section className="py-32 md:py-56">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="relative group">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-[4rem] blur-[100px] opacity-20 group-hover:opacity-30 transition-opacity" />
-            <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[4rem] p-12 md:p-32 text-center relative z-10 shadow-sm">
-              <h2 className="text-5xl md:text-8xl font-black text-slate-950 dark:text-white tracking-tight mb-10 leading-none">
-                Ready to <span className="text-blue-600">Start?</span>
+            <div className="absolute inset-0 bg-blue-600 rounded-[4rem] blur-[100px] opacity-10" />
+            <div className="bg-slate-950 border border-slate-800 rounded-[4rem] p-12 md:p-32 text-center relative z-10 shadow-2xl">
+              <h2 className="text-5xl md:text-8xl font-black text-white tracking-tight mb-10 leading-none">
+                Ready to <span className="text-blue-600">Scale?</span>
               </h2>
-              <p className="text-xl text-slate-500 dark:text-slate-400 max-w-2xl mx-auto mb-16 font-medium leading-relaxed">
-                Join thousands of users who trust ProxyMama for their proxy needs.
+              <p className="text-xl text-slate-400 max-w-2xl mx-auto mb-16 font-medium leading-relaxed">
+                Join thousands of businesses who trust our infrastructure.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
                 <Link
                   to="/register"
-                  className="w-full sm:w-auto px-14 py-7 bg-blue-600 text-white font-black rounded-3xl hover:bg-blue-700 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-2xl shadow-blue-500/20 text-xl"
+                  className="w-full sm:w-auto px-14 py-7 bg-blue-600 text-white font-black rounded-3xl hover:bg-blue-700 transition-all text-xl"
                 >
                   Create Account
                 </Link>
                 <Link
                   to="/contact"
-                  className="w-full sm:w-auto px-14 py-7 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-black rounded-3xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-xl"
+                  className="w-full sm:w-auto px-14 py-7 bg-white/5 text-white font-black rounded-3xl border border-white/10 hover:bg-white/10 transition-all text-xl"
                 >
                   Contact Us
                 </Link>

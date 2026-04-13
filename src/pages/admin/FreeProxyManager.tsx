@@ -3,13 +3,15 @@ import { collection, query, onSnapshot, addDoc, deleteDoc, doc, serverTimestamp 
 import { db } from '../../lib/firebase';
 import { getFreeProxyCampaign, updateFreeProxyCampaign } from '../../services/dbService';
 import { toast } from 'react-hot-toast';
-import { Zap, Plus, Trash2, ShieldCheck, Clock, Globe, Activity, Save, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Zap, Plus, Trash2, ShieldCheck, Clock, Globe, Activity, Save, ToggleLeft, ToggleRight, Calendar, Timer } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { formatDistanceToNow, isAfter, isBefore } from 'date-fns';
 
 export default function FreeProxyManager() {
   const [campaign, setCampaign] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [timeLeft, setTimeLeft] = useState<string>('');
   
   useEffect(() => {
     const fetchCampaign = async () => {
@@ -20,9 +22,8 @@ export default function FreeProxyManager() {
         // Initialize if not exists
         const campaignRef = await addDoc(collection(db, 'freeProxyCampaign'), {
           isActive: false,
-          title: 'Daily Free Gift',
-          description: 'Get 2 hours free proxy trial every day!',
-          validity: '2h',
+          title: 'Free Proxy Trial',
+          description: 'Claim your high-speed proxy trial for the duration of this campaign.',
           speed: 'Uncapped',
           proxyType: 'SOCKS5',
           host: '',
@@ -34,7 +35,6 @@ export default function FreeProxyManager() {
         setCampaign({ 
           id: campaignRef.id, 
           isActive: false, 
-          validity: '2h', 
           speed: 'Uncapped', 
           proxyType: 'SOCKS5',
           host: '',
@@ -48,6 +48,31 @@ export default function FreeProxyManager() {
 
     fetchCampaign();
   }, []);
+
+  // Timer logic
+  useEffect(() => {
+    if (!campaign?.isActive || !campaign?.endTime) {
+      setTimeLeft('');
+      return;
+    }
+
+    const timer = setInterval(() => {
+      const now = new Date();
+      const end = new Date(campaign.endTime);
+      const start = campaign.startTime ? new Date(campaign.startTime) : null;
+
+      if (start && isBefore(now, start)) {
+        setTimeLeft(`Starts in ${formatDistanceToNow(start)}`);
+      } else if (isAfter(now, end)) {
+        setTimeLeft('Expired');
+        // Auto deactivate if expired? Maybe just show expired
+      } else {
+        setTimeLeft(`Expires in ${formatDistanceToNow(end, { addSuffix: false })}`);
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [campaign]);
 
   const handleUpdateCampaign = async (updates: any) => {
     if (!campaign) return;
@@ -63,6 +88,18 @@ export default function FreeProxyManager() {
     }
   };
 
+  const startCampaign = async (durationHours: number) => {
+    const startTime = new Date();
+    const endTime = new Date();
+    endTime.setHours(endTime.getHours() + durationHours);
+
+    await handleUpdateCampaign({
+      isActive: true,
+      startTime,
+      endTime
+    });
+  };
+
   if (loading && !campaign) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -73,26 +110,34 @@ export default function FreeProxyManager() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Free Proxy Campaign</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm">Manage the daily free proxy trial for users.</p>
         </div>
-        {campaign && (
-          <button
-            onClick={() => handleUpdateCampaign({ isActive: !campaign.isActive })}
-            disabled={saving}
-            className={cn(
-              "flex items-center px-6 py-2.5 rounded-xl font-bold transition-all shadow-lg",
-              campaign.isActive 
-                ? "bg-green-100 text-green-700 hover:bg-green-200 shadow-green-100" 
-                : "bg-red-100 text-red-700 hover:bg-red-200 shadow-red-100"
-            )}
-          >
-            {campaign.isActive ? <ToggleRight className="mr-2" /> : <ToggleLeft className="mr-2" />}
-            Campaign {campaign.isActive ? 'Active' : 'Inactive'}
-          </button>
-        )}
+        <div className="flex items-center gap-4">
+          {timeLeft && (
+            <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-xl border border-blue-100 dark:border-blue-900/30 flex items-center font-bold text-sm">
+              <Timer size={16} className="mr-2" />
+              {timeLeft}
+            </div>
+          )}
+          {campaign && (
+            <button
+              onClick={() => handleUpdateCampaign({ isActive: !campaign.isActive })}
+              disabled={saving}
+              className={cn(
+                "flex items-center px-6 py-2.5 rounded-xl font-bold transition-all shadow-lg",
+                campaign.isActive 
+                  ? "bg-green-100 text-green-700 hover:bg-green-200 shadow-green-100" 
+                  : "bg-red-100 text-red-700 hover:bg-red-200 shadow-red-100"
+              )}
+            >
+              {campaign.isActive ? <ToggleRight className="mr-2" /> : <ToggleLeft className="mr-2" />}
+              Campaign {campaign.isActive ? 'Active' : 'Inactive'}
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -117,45 +162,100 @@ export default function FreeProxyManager() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Trial Validity</label>
-                <select
-                  value={campaign?.validity}
-                  onChange={(e) => handleUpdateCampaign({ validity: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                >
-                  <option value="2h">2 Hours</option>
-                  <option value="1d">1 Day</option>
-                  <option value="3d">3 Days</option>
-                  <option value="7d">7 Days</option>
-                  <option value="50d">50 Days</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Speed Limit</label>
-                <select
-                  value={campaign?.speed}
-                  onChange={(e) => handleUpdateCampaign({ speed: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                >
-                  <option value="Uncapped">Uncapped</option>
-                  <option value="150Mbps">150 Mbps</option>
-                  <option value="100Mbps">100 Mbps</option>
-                  <option value="70Mbps">70 Mbps</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Proxy Type</label>
-                <input
-                  type="text"
-                  value={campaign?.proxyType}
-                  onChange={(e) => setCampaign({ ...campaign, proxyType: e.target.value })}
-                  onBlur={() => handleUpdateCampaign({ proxyType: campaign.proxyType })}
-                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                  placeholder="e.g. SOCKS5 / HTTP"
+                <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Campaign Description</label>
+                <textarea
+                  value={campaign?.description}
+                  onChange={(e) => setCampaign({ ...campaign, description: e.target.value })}
+                  onBlur={() => handleUpdateCampaign({ description: campaign.description })}
+                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none min-h-[80px]"
                 />
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Proxy Type</label>
+                  <input
+                    type="text"
+                    value={campaign?.proxyType}
+                    onChange={(e) => setCampaign({ ...campaign, proxyType: e.target.value })}
+                    onBlur={() => handleUpdateCampaign({ proxyType: campaign.proxyType })}
+                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                    placeholder="e.g. SOCKS5 / HTTP"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Speed Limit</label>
+                  <select
+                    value={campaign?.speed}
+                    onChange={(e) => handleUpdateCampaign({ speed: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                  >
+                    <option value="Uncapped">Uncapped</option>
+                    <option value="150Mbps">150 Mbps</option>
+                    <option value="100Mbps">100 Mbps</option>
+                    <option value="70Mbps">70 Mbps</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-gray-100 dark:border-slate-800">
+                <label className="block text-xs font-bold text-gray-400 uppercase mb-3">Quick Start Campaign</label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {[1, 6, 12, 24, 72, 168].map((hours) => (
+                    <button
+                      key={hours}
+                      onClick={() => startCampaign(hours)}
+                      className="px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-sm font-bold hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-200 transition-all flex items-center justify-center"
+                    >
+                      <Calendar size={14} className="mr-2" />
+                      {hours >= 24 ? `${hours / 24} Day${hours > 24 ? 's' : ''}` : `${hours} Hours`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Maintenance Section */}
+          <div className="bg-red-50 dark:bg-red-900/10 rounded-2xl border border-red-100 dark:border-red-900/20 p-6">
+            <h2 className="text-lg font-bold text-red-700 dark:text-red-400 mb-4 flex items-center">
+              <Trash2 className="mr-2" size={20} />
+              System Maintenance
+            </h2>
+            <div className="space-y-3">
+              <button
+                onClick={async () => {
+                  if (confirm('Are you sure you want to delete ALL previous orders? This cannot be undone.')) {
+                    try {
+                      const { clearAllOrders } = await import('../../services/dbService');
+                      await clearAllOrders();
+                      toast.success('All orders cleared successfully');
+                    } catch (e) {
+                      toast.error('Failed to clear orders');
+                    }
+                  }
+                }}
+                className="w-full px-4 py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-all flex items-center justify-center"
+              >
+                Clear All Orders
+              </button>
+              <button
+                onClick={async () => {
+                  if (confirm('Are you sure you want to clear all proxy assignments?')) {
+                    try {
+                      const { clearAllProxyAssignments } = await import('../../services/dbService');
+                      await clearAllProxyAssignments();
+                      toast.success('All proxy assignments cleared');
+                    } catch (e) {
+                      toast.error('Failed to clear assignments');
+                    }
+                  }
+                }}
+                className="w-full px-4 py-3 bg-white dark:bg-slate-800 text-red-600 border border-red-200 dark:border-red-900/30 font-bold rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-all flex items-center justify-center"
+              >
+                Clear Proxy Assignments
+              </button>
             </div>
           </div>
         </div>

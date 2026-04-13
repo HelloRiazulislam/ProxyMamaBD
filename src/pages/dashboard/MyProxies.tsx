@@ -25,19 +25,48 @@ export default function MyProxies() {
   useEffect(() => {
     if (!profile) return;
 
-    const q = query(
+    const q1 = query(
       collection(db, 'proxyInventory'),
       where('assignedToUid', '==', profile.uid),
       where('isAssigned', '==', true)
     );
 
-    const unsubProxies = onSnapshot(q, (snap) => {
-      setProxies(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    const q2 = query(
+      collection(db, 'freeProxyClaims'),
+      where('uid', '==', profile.uid)
+    );
+
+    const unsub1 = onSnapshot(q1, (snap) => {
+      const p1 = snap.docs.map(doc => ({ id: doc.id, collection: 'proxyInventory', ...doc.data() }));
+      setProxies(prev => {
+        const others = prev.filter(p => p.collection !== 'proxyInventory');
+        return [...others, ...p1].sort((a, b) => {
+          const dateA = a.assignedAt?.toDate ? a.assignedAt.toDate().getTime() : new Date(a.assignedAt || 0).getTime();
+          const dateB = b.assignedAt?.toDate ? b.assignedAt.toDate().getTime() : new Date(b.assignedAt || 0).getTime();
+          return dateB - dateA;
+        });
+      });
+      setLoading(false);
+    });
+
+    const unsub2 = onSnapshot(q2, (snap) => {
+      const p2 = snap.docs.map(doc => ({ id: doc.id, collection: 'freeProxyClaims', ...doc.data() }));
+      setProxies(prev => {
+        const others = prev.filter(p => p.collection !== 'freeProxyClaims');
+        return [...others, ...p2].sort((a, b) => {
+          const dateA = a.assignedAt?.toDate ? a.assignedAt.toDate().getTime() : 
+                        a.claimedAt?.toDate ? a.claimedAt.toDate().getTime() : new Date(a.assignedAt || a.claimedAt || 0).getTime();
+          const dateB = b.assignedAt?.toDate ? b.assignedAt.toDate().getTime() : 
+                        b.claimedAt?.toDate ? b.claimedAt.toDate().getTime() : new Date(b.assignedAt || b.claimedAt || 0).getTime();
+          return dateB - dateA;
+        });
+      });
       setLoading(false);
     });
 
     return () => {
-      unsubProxies();
+      unsub1();
+      unsub2();
     };
   }, [profile]);
 

@@ -12,7 +12,8 @@ import {
   getDocs,
   limit,
   getDoc,
-  setDoc
+  setDoc,
+  writeBatch
 } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
 import axios from 'axios';
@@ -399,6 +400,115 @@ export const manualBalanceUpdate = async (uid: string, amount: number, descripti
     });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'manualBalanceUpdate');
+  }
+};
+
+// Free Proxy Campaign Logic
+export const getFreeProxyCampaign = async () => {
+  try {
+    const q = query(collection(db, 'freeProxyCampaign'), limit(1));
+    const snap = await getDocs(q);
+    if (snap.empty) return null;
+    return { id: snap.docs[0].id, ...snap.docs[0].data() };
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, 'freeProxyCampaign');
+  }
+};
+
+export const updateFreeProxyCampaign = async (id: string, data: any) => {
+  try {
+    const campaignRef = doc(db, 'freeProxyCampaign', id);
+    await updateDoc(campaignRef, { ...data, updatedAt: serverTimestamp() });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `freeProxyCampaign/${id}`);
+  }
+};
+
+export const claimFreeProxy = async (uid: string) => {
+  try {
+    return await runTransaction(db, async (transaction) => {
+      // 1. Check if user already claimed today
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const claimsQ = query(
+        collection(db, 'freeProxyClaims'),
+        where('uid', '==', uid),
+        where('claimedAt', '>=', today)
+      );
+      const claimsSnap = await getDocs(claimsQ);
+      if (!claimsSnap.empty) throw new Error('You have already claimed your free proxy for today.');
+
+      // 2. Get Campaign Settings
+      const campaignQ = query(collection(db, 'freeProxyCampaign'), limit(1));
+      const campaignSnap = await getDocs(campaignQ);
+      if (campaignSnap.empty || !campaignSnap.docs[0].data().isActive) {
+        throw new Error('Free proxy campaign is currently inactive.');
+      }
+      const campaign = campaignSnap.docs[0].data();
+
+      // 3. Calculate Expiry
+      const expiryDate = new Date();
+      const validity = campaign.validity || '2h';
+      if (validity === '2h') expiryDate.setHours(expiryDate.getHours() + 2);
+      else if (validity === '1d') expiryDate.setDate(expiryDate.getDate() + 1);
+      else if (validity === '3d') expiryDate.setDate(expiryDate.getDate() + 3);
+      else if (validity === '7d') expiryDate.setDate(expiryDate.getDate() + 7);
+      else if (validity === '50d') expiryDate.setDate(expiryDate.getDate() + 50);
+
+      // 4. Create Claim Record with Proxy Details
+      const claimRef = doc(collection(db, 'freeProxyClaims'));
+      transaction.set(claimRef, {
+        uid,
+        campaignId: campaignSnap.docs[0].id,
+        host: campaign.host,
+        port: campaign.port,
+        username: campaign.username,
+        password: campaign.password,
+        type: campaign.proxyType,
+        speed: campaign.speed,
+        planTitle: `Free Trial (${validity})`,
+        claimedAt: serverTimestamp(),
+        expiryDate: expiryDate.toISOString()
+      });
+
+      // 5. Create Notification
+      const notificationRef = doc(collection(db, 'notifications'));
+      transaction.set(notificationRef, {
+        uid,
+        title: 'Free Proxy Claimed! 🎁',
+        message: `You have successfully claimed a ${validity} free proxy trial. Enjoy!`,
+        isRead: false,
+        createdAt: serverTimestamp()
+      });
+
+      return claimRef.id;
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, 'claimFreeProxy');
+  }
+};
+
+export const checkExpiredFreeProxies = async () => {
+  try {
+    const now = new Date().toISOString();
+    const q = query(
+      collection(db, 'freeProxyClaims'),
+      where('expiryDate', '<=', now)
+    );
+    
+    const snap = await getDocs(q);
+    if (snap.empty) return;
+
+    const batch = writeBatch(db);
+    snap.docs.forEach(claimDoc => {
+      batch.delete(claimDoc.ref);
+    });
+    
+    await batch.commit();
+    console.log(`Deleted ${snap.size} expired free proxy claims.`);
+  } catch (error) {
+    console.error('Error checking expired free proxies:', error);
   }
 };
 

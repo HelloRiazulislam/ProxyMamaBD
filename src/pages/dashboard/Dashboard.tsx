@@ -20,6 +20,7 @@ import { format, differenceInHours } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { logActivity } from '../../services/activityService';
+import FreeProxyClaim from '../../components/FreeProxyClaim';
 
 export default function Dashboard() {
   const { profile } = useAuth();
@@ -117,6 +118,8 @@ export default function Dashboard() {
           <p className="text-gray-500 dark:text-gray-400 text-sm">{t.overviewAccount}</p>
         </div>
       </div>
+
+      <FreeProxyClaim />
 
       {/* Announcements */}
       {announcements.length > 0 && (

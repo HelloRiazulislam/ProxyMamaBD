@@ -204,6 +204,44 @@
       },
       "required": ["action", "createdAt"]
     },
+    "FreeProxyCampaign": {
+      "title": "Free Proxy Campaign",
+      "description": "Settings for the free proxy trial campaign",
+      "type": "object",
+      "properties": {
+        "isActive": { "type": "boolean" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "validity": { "type": "string", "enum": ["2h", "1d", "3d", "7d", "50d"] },
+        "speed": { "type": "string", "enum": ["Uncapped", "100Mbps", "150Mbps", "70Mbps"] },
+        "proxyType": { "type": "string" },
+        "host": { "type": "string" },
+        "port": { "type": "number" },
+        "username": { "type": "string" },
+        "password": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["isActive", "validity", "speed", "proxyType", "host", "port", "username", "password"]
+    },
+    "FreeProxyClaim": {
+      "title": "Free Proxy Claim",
+      "description": "Record of a user claiming a free proxy",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "campaignId": { "type": "string" },
+        "host": { "type": "string" },
+        "port": { "type": "number" },
+        "username": { "type": "string" },
+        "password": { "type": "string" },
+        "type": { "type": "string" },
+        "speed": { "type": "string" },
+        "planTitle": { "type": "string" },
+        "claimedAt": { "type": "string", "format": "date-time" },
+        "expiryDate": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "host", "port", "username", "password", "claimedAt", "expiryDate"]
+    },
     "ClashSubscriptionPlan": {
       "title": "Clash Subscription Plan",
       "description": "Subscription plans for Clash configurations",
@@ -319,6 +357,9 @@
     "giftCards/{cardId}": { "schema": "GiftCard", "description": "Gift cards" },
     "announcements/{announcementId}": { "schema": "Announcement", "description": "Announcements" },
     "activityLogs/{logId}": { "schema": "ActivityLog", "description": "Activity logs" },
+    "freeProxyCampaign/{campaignId}": { "schema": "FreeProxyCampaign", "description": "Free proxy campaign settings" },
+    "freeProxyPool/{proxyId}": { "schema": "FreeProxyPool", "description": "Free proxy trial pool" },
+    "freeProxyClaims/{claimId}": { "schema": "FreeProxyClaim", "description": "Free proxy claim records" },
     "clashSubscriptionPlans/{planId}": { "schema": "ClashSubscriptionPlan", "description": "Clash subscription plans" },
     "userClashSubscriptions/{subId}": { "schema": "UserClashSubscription", "description": "User Clash subscriptions" },
     "settings/{settingsId}": { "schema": "PlatformSettings", "description": "Global settings" }

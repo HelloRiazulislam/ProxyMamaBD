@@ -61,6 +61,7 @@ import AdminCoupons from './pages/admin/Coupons';
 import AdminSupportTickets from './pages/admin/SupportTickets';
 import AdminAnnouncements from './pages/admin/Announcements';
 import AdminGiftCards from './pages/admin/GiftCards';
+import FreeProxyManager from './pages/admin/FreeProxyManager';
 import AdminActivityLogs from './pages/admin/ActivityLogs';
 
 // Types
@@ -124,6 +125,7 @@ export const useAuth = () => useContext(AuthContext);
 export const useSettings = () => useContext(SettingsContext);
 
 import { seedInitialData } from './services/seedService';
+import { checkExpiredFreeProxies } from './services/dbService';
 import NoticeBar from './components/NoticeBar';
 
 import Onboarding from './pages/Onboarding';
@@ -172,6 +174,9 @@ export default function App() {
   useEffect(() => {
     // Seed initial data for preview
     seedInitialData().catch(console.error);
+    
+    // Check for expired free proxies
+    checkExpiredFreeProxies().catch(console.error);
 
     // Listen to settings
     const unsubSettings = onSnapshot(doc(db, 'settings', 'platform'), 
@@ -347,6 +352,7 @@ export default function App() {
             <Route path="support/:id" element={<TicketDetails />} />
             <Route path="announcements" element={<AdminAnnouncements />} />
             <Route path="gift-cards" element={<AdminGiftCards />} />
+            <Route path="free-proxy" element={<FreeProxyManager />} />
             <Route path="settings" element={<AdminSettings />} />
             <Route path="activity-logs" element={<AdminActivityLogs />} />
           </Route>

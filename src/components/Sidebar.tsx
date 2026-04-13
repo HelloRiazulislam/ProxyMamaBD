@@ -151,6 +151,7 @@ export default function Sidebar({ role }: SidebarProps) {
     { name: 'Wallet Transactions', icon: History, path: '/admin/wallet-transactions' },
     { name: 'Coupons', icon: Ticket, path: '/admin/coupons' },
     { name: 'Gift Cards', icon: Gift, path: '/admin/gift-cards' },
+    { name: 'Free Proxy Campaign', icon: Zap, path: '/admin/free-proxy' },
     { name: 'Announcements', icon: Megaphone, path: '/admin/announcements' },
     { name: 'Support', icon: MessageSquare, path: '/admin/support', badge: openTicketsCount },
     { name: 'Notifications', icon: Bell, path: '/admin/notifications' },

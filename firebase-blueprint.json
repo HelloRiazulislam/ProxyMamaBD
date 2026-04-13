@@ -1,0 +1,326 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and wallet information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "walletBalance": { "type": "number" },
+        "referralCode": { "type": "string" },
+        "referredBy": { "type": "string" },
+        "referralEarnings": { "type": "number" },
+        "isBanned": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role", "walletBalance"]
+    },
+    "WalletTransaction": {
+      "title": "Wallet Transaction",
+      "description": "History of wallet balance changes",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "amount": { "type": "number" },
+        "type": { "type": "string", "enum": ["deposit", "purchase", "refund", "adjustment"] },
+        "status": { "type": "string" },
+        "description": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "amount", "type", "createdAt"]
+    },
+    "BalanceRequest": {
+      "title": "Balance Request",
+      "description": "User request to add balance to wallet",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "amount": { "type": "number" },
+        "paymentMethod": { "type": "string" },
+        "transactionId": { "type": "string" },
+        "note": { "type": "string" },
+        "screenshotUrl": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "rejectionReason": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "amount", "paymentMethod", "status", "createdAt"]
+    },
+    "ProxyInventory": {
+      "title": "Proxy Inventory",
+      "description": "Actual proxy records in stock",
+      "type": "object",
+      "properties": {
+        "host": { "type": "string" },
+        "port": { "type": "number" },
+        "username": { "type": "string" },
+        "password": { "type": "string" },
+        "type": { "type": "string" },
+        "speed": { "type": "string" },
+        "status": { "type": "string", "enum": ["available", "sold"] },
+        "isAssigned": { "type": "boolean" },
+        "assignedToUid": { "type": "string" },
+        "orderId": { "type": "string" },
+        "autoRenew": { "type": "boolean" },
+        "expiryDate": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["host", "port", "username", "password", "isAssigned"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Record of proxy purchase",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "planTitle": { "type": "string" },
+        "amount": { "type": "number" },
+        "discountAmount": { "type": "number" },
+        "couponCode": { "type": "string" },
+        "proxyId": { "type": "string" },
+        "purchaseDate": { "type": "string", "format": "date-time" },
+        "expiryDate": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["active", "expired", "suspended"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "amount", "proxyId", "status", "createdAt"]
+    },
+    "Coupon": {
+      "title": "Coupon",
+      "description": "Discount coupons",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string" },
+        "discountType": { "type": "string", "enum": ["percentage", "fixed"] },
+        "discountValue": { "type": "number" },
+        "minPurchase": { "type": "number" },
+        "maxUsage": { "type": "number" },
+        "usedCount": { "type": "number" },
+        "usageType": { "type": "string", "enum": ["registration", "deposit", "purchase"] },
+        "expiryDate": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["active", "inactive"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["code", "discountType", "discountValue", "status", "createdAt"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "User notifications",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "isRead": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "message", "isRead", "createdAt"]
+    },
+    "SupportTicket": {
+      "title": "Support Ticket",
+      "description": "User support requests",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "subject": { "type": "string" },
+        "category": { "type": "string", "enum": ["billing", "technical", "general", "other"] },
+        "status": { "type": "string", "enum": ["open", "replied", "closed"] },
+        "priority": { "type": "string", "enum": ["low", "medium", "high"] },
+        "lastMessageAt": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "subject", "status", "createdAt"]
+    },
+    "TicketMessage": {
+      "title": "Ticket Message",
+      "description": "Individual messages within a support ticket",
+      "type": "object",
+      "properties": {
+        "ticketId": { "type": "string" },
+        "senderUid": { "type": "string" },
+        "senderRole": { "type": "string", "enum": ["admin", "user"] },
+        "message": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ticketId", "senderUid", "senderRole", "message", "createdAt"]
+    },
+    "Referral": {
+      "title": "Referral",
+      "description": "Record of a successful referral",
+      "type": "object",
+      "properties": {
+        "referrerUid": { "type": "string" },
+        "referredUid": { "type": "string" },
+        "referredEmail": { "type": "string" },
+        "rewardAmount": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "completed"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["referrerUid", "referredUid", "status", "createdAt"]
+    },
+    "GiftCard": {
+      "title": "Gift Card",
+      "description": "Prepaid cards for wallet balance",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string" },
+        "amount": { "type": "number" },
+        "isUsed": { "type": "boolean" },
+        "usedByUid": { "type": "string" },
+        "usedAt": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["code", "amount", "isUsed", "createdAt"]
+    },
+    "Announcement": {
+      "title": "Announcement",
+      "description": "Global notices for users",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "type": { "type": "string", "enum": ["info", "warning", "success", "danger"] },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "content", "type", "isActive", "createdAt"]
+    },
+    "ActivityLog": {
+      "title": "Activity Log",
+      "description": "System and user activity logs",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "action": { "type": "string" },
+        "details": { "type": "string" },
+        "ip": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["action", "createdAt"]
+    },
+    "ClashSubscriptionPlan": {
+      "title": "Clash Subscription Plan",
+      "description": "Subscription plans for Clash configurations",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "duration": { "type": "number" },
+        "proxies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "type": { "type": "string", "enum": ["socks5", "http", "ss", "vmess", "trojan"] },
+              "server": { "type": "string" },
+              "port": { "type": "number" },
+              "username": { "type": "string" },
+              "password": { "type": "string" },
+              "udp": { "type": "boolean" },
+              "tls": { "type": "boolean" },
+              "sni": { "type": "string" }
+            }
+          }
+        },
+        "status": { "type": "string", "enum": ["active", "inactive"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "price", "duration", "proxies", "status"]
+    },
+    "UserClashSubscription": {
+      "title": "User Clash Subscription",
+      "description": "User's active Clash subscriptions",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "planId": { "type": "string" },
+        "planName": { "type": "string" },
+        "token": { "type": "string" },
+        "expiryDate": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["active", "expired", "suspended"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "planId", "token", "expiryDate", "status", "createdAt"]
+    },
+    "PlatformSettings": {
+      "title": "Platform Settings",
+      "description": "Global configuration for the platform",
+      "type": "object",
+      "properties": {
+        "platformName": { "type": "string" },
+        "supportEmail": { "type": "string" },
+        "maintenanceMode": { "type": "boolean" },
+        "referralBonusPercentage": { "type": "number" },
+        "minDepositAmount": { "type": "number" },
+        "paymentMethods": {
+          "type": "object",
+          "properties": {
+            "bkash": { "type": "string" },
+            "nagad": { "type": "string" },
+            "rocket": { "type": "string" },
+            "bkashInstructions": { "type": "string" },
+            "nagadInstructions": { "type": "string" },
+            "rocketInstructions": { "type": "string" },
+            "generalInstructions": { "type": "string" }
+          }
+        },
+        "noticeBar": {
+          "type": "object",
+          "properties": {
+            "content": { "type": "string" },
+            "isActive": { "type": "boolean" },
+            "type": { "type": "string", "enum": ["info", "warning", "success", "danger"] }
+          }
+        },
+        "socialLinks": {
+          "type": "object",
+          "properties": {
+            "telegram": { "type": "string" },
+            "facebook": { "type": "string" },
+            "whatsapp": { "type": "string" }
+          }
+        },
+        "branding": {
+          "type": "object",
+          "properties": {
+            "logoUrl": { "type": "string" },
+            "faviconUrl": { "type": "string" }
+          }
+        },
+        "legalPages": {
+          "type": "object",
+          "properties": {
+            "termsAndConditions": { "type": "string" },
+            "privacyPolicy": { "type": "string" }
+          }
+        },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "firestore": {
+    "users/{uid}": { "schema": "User", "description": "User profiles" },
+    "walletTransactions/{txId}": { "schema": "WalletTransaction", "description": "Wallet history" },
+    "balanceRequests/{requestId}": { "schema": "BalanceRequest", "description": "Deposit requests" },
+    "proxyInventory/{proxyId}": { "schema": "ProxyInventory", "description": "Proxy stock" },
+    "orders/{orderId}": { "schema": "Order", "description": "Purchase orders" },
+    "notifications/{notificationId}": { "schema": "Notification", "description": "User notifications" },
+    "coupons/{couponId}": { "schema": "Coupon", "description": "Discount coupons" },
+    "supportTickets/{ticketId}": { "schema": "SupportTicket", "description": "Support tickets" },
+    "supportTickets/{ticketId}/messages/{messageId}": { "schema": "TicketMessage", "description": "Ticket messages" },
+    "referrals/{referralId}": { "schema": "Referral", "description": "Referral records" },
+    "giftCards/{cardId}": { "schema": "GiftCard", "description": "Gift cards" },
+    "announcements/{announcementId}": { "schema": "Announcement", "description": "Announcements" },
+    "activityLogs/{logId}": { "schema": "ActivityLog", "description": "Activity logs" },
+    "clashSubscriptionPlans/{planId}": { "schema": "ClashSubscriptionPlan", "description": "Clash subscription plans" },
+    "userClashSubscriptions/{subId}": { "schema": "UserClashSubscription", "description": "User Clash subscriptions" },
+    "settings/{settingsId}": { "schema": "PlatformSettings", "description": "Global settings" }
+  }
+}

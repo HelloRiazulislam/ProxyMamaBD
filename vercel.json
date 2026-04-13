@@ -1,0 +1,9 @@
+{
+  "rewrites": [
+    { "source": "/sub/(.*)", "destination": "/api/sub?token=$1" },
+    { "source": "/clash/(.*)", "destination": "/api/sub?token=$1" },
+    { "source": "/api/sub/(.*)", "destination": "/api/sub?token=$1" },
+    { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

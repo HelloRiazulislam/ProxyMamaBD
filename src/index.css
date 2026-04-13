@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  /* Refined Dark Mode Palette */
+  --color-slate-950: #020617;
+  --color-slate-900: #0f172a;
+  --color-slate-800: #1e293b;
+  --color-slate-700: #334155;
+  --color-slate-600: #475569;
+}
+
+@layer base {
+  body {
+    @apply bg-white text-slate-900 transition-colors duration-300;
+  }
+  
+  .dark body {
+    @apply bg-[#0B1120] text-slate-200; /* Softer background, lighter text */
+  }
+
+  /* Ensure consistent card/panel backgrounds in dark mode */
+  .dark .bg-white {
+    @apply !bg-[#1E293B];
+  }
+  .dark .bg-gray-50 {
+    @apply !bg-[#0F172A];
+  }
+  .dark .bg-gray-100 {
+    @apply !bg-[#1E293B];
+  }
+  .dark .text-gray-900 {
+    @apply !text-slate-100;
+  }
+  .dark .text-gray-600 {
+    @apply !text-slate-400;
+  }
+  .dark .text-gray-500 {
+    @apply !text-slate-500;
+  }
+  .dark .border-gray-100 {
+    @apply !border-slate-800;
+  }
+  .dark .border-gray-200 {
+    @apply !border-slate-800;
+  }
+}

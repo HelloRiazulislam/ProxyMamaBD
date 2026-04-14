@@ -42,7 +42,8 @@ export default function BuyProxy() {
   const [availableCount, setAvailableCount] = useState(0);
 
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'proxyServers'), (snap) => {
+    const q = query(collection(db, 'proxyServers'), where('status', '==', 'active'));
+    const unsub = onSnapshot(q, (snap) => {
       const serverList = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setServers(serverList);
       if (serverList.length > 0 && !selectedServer) {
@@ -217,7 +218,7 @@ export default function BuyProxy() {
                 <option value="" disabled>Select a server</option>
                 {servers.map((server) => (
                   <option key={server.id} value={server.id}>
-                    {server.name} - {server.location}
+                    {server.name}
                   </option>
                 ))}
               </select>

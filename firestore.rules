@@ -60,6 +60,11 @@ service cloud.firestore {
       allow update: if isAuthenticated();
     }
 
+    // Proxy Servers
+    match /proxyServers/{serverId} {
+      allow read: if isAuthenticated();
+    }
+
     // Proxy Plans
     match /proxyPlans/{planId} {
       allow read: if true;

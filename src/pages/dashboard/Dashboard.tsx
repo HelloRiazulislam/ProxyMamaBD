@@ -15,7 +15,7 @@ import {
   Activity
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { collection, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, onSnapshot, getDocs } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { format, differenceInHours } from 'date-fns';
 import { Link } from 'react-router-dom';
@@ -36,16 +36,18 @@ export default function Dashboard() {
   useEffect(() => {
     if (!profile) return;
 
-    // Announcements
-    const annQuery = query(
-      collection(db, 'announcements'),
-      where('isActive', '==', true),
-      orderBy('createdAt', 'desc'),
-      limit(3)
-    );
-    const unsubAnn = onSnapshot(annQuery, (snap) => {
+    // Announcements (One-time fetch)
+    const fetchAnnouncements = async () => {
+      const annQuery = query(
+        collection(db, 'announcements'),
+        where('isActive', '==', true),
+        orderBy('createdAt', 'desc'),
+        limit(3)
+      );
+      const snap = await getDocs(annQuery);
       setAnnouncements(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
+    };
+    fetchAnnouncements();
 
     // Recent Orders
     const ordersQuery = query(
@@ -59,16 +61,18 @@ export default function Dashboard() {
       setActiveProxiesCount(snap.docs.filter(doc => doc.data().status === 'active').length);
     });
 
-    // Pending Balance Requests
-    const requestsQuery = query(
-      collection(db, 'balanceRequests'),
-      where('uid', '==', profile.uid),
-      where('status', '==', 'pending'),
-      orderBy('createdAt', 'desc')
-    );
-    const unsubRequests = onSnapshot(requestsQuery, (snap) => {
+    // Pending Balance Requests (One-time fetch)
+    const fetchRequests = async () => {
+      const requestsQuery = query(
+        collection(db, 'balanceRequests'),
+        where('uid', '==', profile.uid),
+        where('status', '==', 'pending'),
+        orderBy('createdAt', 'desc')
+      );
+      const snap = await getDocs(requestsQuery);
       setPendingRequests(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
+    };
+    fetchRequests();
 
     // Expiring Proxies (within 24h)
     const inventoryQuery = query(
@@ -87,23 +91,22 @@ export default function Dashboard() {
       setExpiringProxies(expiring);
     });
 
-    // Recent Activity
-    const activityQuery = query(
-      collection(db, 'activityLogs'),
-      where('uid', '==', profile.uid),
-      orderBy('createdAt', 'desc'),
-      limit(5)
-    );
-    const unsubActivity = onSnapshot(activityQuery, (snap) => {
+    // Recent Activity (One-time fetch)
+    const fetchActivity = async () => {
+      const activityQuery = query(
+        collection(db, 'activityLogs'),
+        where('uid', '==', profile.uid),
+        orderBy('createdAt', 'desc'),
+        limit(5)
+      );
+      const snap = await getDocs(activityQuery);
       setRecentActivity(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
+    };
+    fetchActivity();
 
     return () => {
-      unsubAnn();
       unsubOrders();
-      unsubRequests();
       unsubInventory();
-      unsubActivity();
     };
   }, [profile]);
 

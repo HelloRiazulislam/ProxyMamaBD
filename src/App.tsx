@@ -226,15 +226,6 @@ export default function App() {
                 data.role = 'admin';
               }
               setProfile(data);
-              
-              // Update lastActiveAt for existing users
-              try {
-                await updateDoc(profileRef, {
-                  lastActiveAt: serverTimestamp()
-                });
-              } catch (err) {
-                // Ignore errors if rules block it
-              }
             } else {
               // Handle case where user exists in Auth but not in Firestore yet
               // AUTO-CREATE PROFILE for all users to prevent permission issues
@@ -257,8 +248,7 @@ export default function App() {
                 onboardingCompleted: true, // Default to true for auto-created (usually existing users)
                 lastReadNotificationAt: serverTimestamp(),
                 readNotifications: [],
-                createdAt: serverTimestamp(),
-                lastActiveAt: serverTimestamp()
+                createdAt: serverTimestamp()
               };
               
               try {

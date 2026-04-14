@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { collection, query, onSnapshot, orderBy, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy, doc, updateDoc, deleteDoc, getDocs, limit } from 'firebase/firestore';
 import { db, auth } from '../../lib/firebase';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { manualBalanceUpdate } from '../../services/dbService';
@@ -20,11 +20,18 @@ export default function AdminUsers() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'users'), (snap) => {
-      setUsers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      setLoading(false);
-    });
-    return () => unsub();
+    const fetchUsers = async () => {
+      try {
+        const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(1000));
+        const snap = await getDocs(q);
+        setUsers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      } catch (error) {
+        console.error("Error fetching users:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUsers();
   }, []);
 
   const toggleAdmin = async (userId: string, currentRole: string) => {

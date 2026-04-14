@@ -6,7 +6,7 @@ import { toast } from 'react-hot-toast';
 import { ShoppingCart, Zap, Globe, Clock, ShieldCheck, Tag, TrendingDown, Check, AlertTriangle, Server, Package } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useNavigate } from 'react-router-dom';
-import { logActivity } from '../../services/activityService';
+import { buyCustomProxiesAtomic } from '../../services/dbService';
 
 const PROXY_TYPES = [
   { id: 'SOCKS5', label: 'SOCKS5', icon: ShieldCheck },
@@ -108,104 +108,18 @@ export default function BuyProxy() {
 
     setLoading(true);
     try {
-      // 1. Get available proxies
-      const q = query(
-        collection(db, 'proxyInventory'),
-        where('isAssigned', '==', false),
-        where('serverId', '==', selectedServer.id),
-        where('type', '==', selectedType.id),
-        where('speed', '==', selectedSpeed.id)
-      );
-      const snap = await getDocs(q);
+      const planTitle = `${selectedType.label} - ${selectedSpeed.label} - ${selectedDuration.label}`;
       
-      if (snap.size < quantity) {
-        throw new Error(`Not enough proxies available. Only ${snap.size} left.`);
-      }
-      
-      const proxyDocs = snap.docs.slice(0, quantity);
-
-      // 2. Update proxy inventory
-      const expiryDate = new Date();
-      expiryDate.setDate(expiryDate.getDate() + selectedDuration.days);
-
-      const updatePromises = proxyDocs.map(proxyDoc => 
-        updateDoc(proxyDoc.ref, {
-          isAssigned: true,
-          assignedToUid: profile.uid,
-          assignedToEmail: profile.email,
-          assignedAt: serverTimestamp(),
-          expiryDate: expiryDate.toISOString(),
-          planTitle: `${selectedType.label} - ${selectedSpeed.label} - ${selectedDuration.label}`,
-          type: selectedType.id,
-          speed: selectedSpeed.id,
-          orderId: 'PENDING', // Temporary ID
-          autoRenew: false
-        })
-      );
-
-      try {
-        await Promise.all(updatePromises);
-      } catch (err: any) {
-        console.error("Inventory update failed:", err);
-        throw new Error("Failed to reserve proxies. Please try again.");
-      }
-
-      // 3. Deduct balance
-      try {
-        await updateDoc(doc(db, 'users', profile.uid), {
-          walletBalance: increment(-finalPrice)
-        });
-      } catch (err: any) {
-        console.error("Balance deduction failed:", err);
-        // Rollback inventory if balance deduction fails
-        const rollbackPromises = proxyDocs.map(proxyDoc => 
-          updateDoc(proxyDoc.ref, {
-            isAssigned: false,
-            assignedToUid: '',
-            assignedToEmail: '',
-            assignedAt: null,
-            expiryDate: '',
-            planTitle: '',
-            orderId: '',
-            autoRenew: false
-          })
-        );
-        await Promise.all(rollbackPromises);
-        throw new Error("Failed to process payment. Please check your balance.");
-      }
-
-      // 4. Create order record
-      let orderId = '';
-      try {
-        const orderRef = await addDoc(collection(db, 'orders'), {
-          uid: profile.uid,
-          userEmail: profile.email,
-          proxyIds: proxyDocs.map(d => d.id),
-          quantity,
-          planTitle: `${selectedType.label} - ${selectedSpeed.label} - ${selectedDuration.label}`,
-          amount: finalPrice,
-          status: 'completed',
-          createdAt: serverTimestamp()
-        });
-        orderId = orderRef.id;
-        
-        // Update proxies with real order ID
-        const finalUpdatePromises = proxyDocs.map(proxyDoc => 
-          updateDoc(proxyDoc.ref, { orderId })
-        );
-        await Promise.all(finalUpdatePromises);
-      } catch (err: any) {
-        console.error("Order creation failed:", err);
-      }
-
-      // 5. Log activity
-      try {
-        await logActivity(
-          'Proxy Purchase',
-          `Purchased ${quantity}x ${selectedType.label} ${selectedSpeed.label} for ${selectedDuration.label} (৳${finalPrice})`,
-          profile
-        );
-      } catch (err) {}
+      await buyCustomProxiesAtomic({
+        uid: profile.uid,
+        serverId: selectedServer.id,
+        type: selectedType.id,
+        speed: selectedSpeed.id,
+        durationDays: selectedDuration.days,
+        quantity,
+        finalPrice,
+        planTitle
+      });
 
       toast.success(`Successfully purchased ${quantity} prox${quantity > 1 ? 'ies' : 'y'}!`);
       navigate('/dashboard/my-proxies');

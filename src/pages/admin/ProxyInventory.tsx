@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { collection, query, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, where, getDocs } from 'firebase/firestore';
+import { collection, query, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, where, getDocs, limit } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { Database, Plus, Edit2, Trash2, Globe, Shield, X, Search, Filter, Clock, AlertCircle, Upload, Download } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -33,24 +33,25 @@ export default function ProxyInventory() {
   const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null);
 
   useEffect(() => {
-    const unsubInv = onSnapshot(collection(db, 'proxyInventory'), (snap) => {
-      setInventory(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      setLoading(false);
-    });
+    const fetchData = async () => {
+      try {
+        const [invSnap, plansSnap, serversSnap] = await Promise.all([
+          getDocs(query(collection(db, 'proxyInventory'), limit(1000))),
+          getDocs(collection(db, 'proxyPlans')),
+          getDocs(collection(db, 'proxyServers'))
+        ]);
 
-    const unsubPlans = onSnapshot(collection(db, 'proxyPlans'), (snap) => {
-      setPlans(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
-
-    const unsubServers = onSnapshot(collection(db, 'proxyServers'), (snap) => {
-      setServers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
-
-    return () => {
-      unsubInv();
-      unsubPlans();
-      unsubServers();
+        setInventory(invSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        setPlans(plansSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        setServers(serversSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      } catch (error) {
+        console.error("Error fetching inventory data:", error);
+      } finally {
+        setLoading(false);
+      }
     };
+
+    fetchData();
   }, []);
 
   const recalculateStock = async (planId: string) => {

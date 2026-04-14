@@ -95,7 +95,7 @@ export default function AdminOrders() {
                         )}>
                           {order.status}
                         </span>
-                        {isExpiringSoon(order.expiresAt) && order.status === 'active' && (
+                        {isExpiringSoon(order.expiryDate) && order.status === 'active' && (
                           <span className="flex items-center text-[9px] font-bold text-orange-600 animate-pulse">
                             <AlertCircle size={10} className="mr-1" /> EXPIRING SOON
                           </span>

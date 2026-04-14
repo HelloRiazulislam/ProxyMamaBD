@@ -160,6 +160,10 @@ export const buyProxy = async (uid: string, planId: string) => {
       if (inventorySnap.empty) throw new Error('No proxy available in inventory');
       const proxyDoc = inventorySnap.docs[0];
       
+      // Re-verify proxy is still unassigned inside transaction
+      const tProxySnap = await transaction.get(proxyDoc.ref);
+      if (tProxySnap.data()?.isAssigned) throw new Error('Proxy was just assigned to someone else. Please try again.');
+
       // 4. Update Balance
       transaction.update(userRef, {
         walletBalance: user.walletBalance - plan.price
@@ -714,6 +718,10 @@ export const buyProxyWithCoupon = async (uid: string, planId: string, couponCode
       const inventorySnap = await getDocs(inventoryQuery);
       if (inventorySnap.empty) throw new Error('No proxy available in inventory');
       const proxyDoc = inventorySnap.docs[0];
+
+      // Re-verify proxy is still unassigned inside transaction
+      const tProxySnap = await transaction.get(proxyDoc.ref);
+      if (tProxySnap.data()?.isAssigned) throw new Error('Proxy was just assigned to someone else. Please try again.');
       
       // 4. Update Balance
       transaction.update(userRef, {
@@ -1020,6 +1028,236 @@ export const buyProxiesBulk = async (uid: string, planId: string, quantity: numb
     return results;
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'buyProxiesBulk');
+  }
+};
+
+// Atomic Bulk Purchase
+export const buyProxiesBulkAtomic = async (uid: string, planId: string, quantity: number, couponCode?: string) => {
+  try {
+    return await runTransaction(db, async (transaction) => {
+      // 1. Get Plan
+      const planRef = doc(db, 'proxyPlans', planId);
+      const planSnap = await transaction.get(planRef);
+      if (!planSnap.exists()) throw new Error('Plan not found');
+      const plan = planSnap.data();
+      
+      if (plan.stock < quantity) throw new Error(`Only ${plan.stock} proxies left in stock.`);
+      
+      // 2. Get User
+      const userRef = doc(db, 'users', uid);
+      const userSnap = await transaction.get(userRef);
+      if (!userSnap.exists()) throw new Error('User not found');
+      const user = userSnap.data();
+      
+      let unitPrice = plan.price;
+      let totalDiscount = 0;
+      let couponId = null;
+
+      if (couponCode) {
+        const q = query(collection(db, 'coupons'), where('code', '==', couponCode), where('status', '==', 'active'));
+        const couponSnap = await getDocs(q);
+        if (!couponSnap.empty) {
+          const couponDoc = couponSnap.docs[0];
+          const coupon = couponDoc.data();
+          
+          if (!(coupon.expiryDate && new Date(coupon.expiryDate) < new Date()) && 
+              !(coupon.maxUsage && coupon.usedCount >= coupon.maxUsage) &&
+              !(coupon.minPurchase && (plan.price * quantity) < coupon.minPurchase)) {
+            
+            let unitDiscount = 0;
+            if (coupon.discountType === 'percentage') {
+              unitDiscount = (plan.price * coupon.discountValue) / 100;
+            } else {
+              unitDiscount = coupon.discountValue / quantity; // Distribute fixed discount
+            }
+            unitPrice = Math.max(0, plan.price - unitDiscount);
+            totalDiscount = (plan.price * quantity) - (unitPrice * quantity);
+            couponId = couponDoc.id;
+          }
+        }
+      }
+      
+      const totalPrice = unitPrice * quantity;
+      if (user.walletBalance < totalPrice) throw new Error('Insufficient balance');
+      
+      // 3. Get available proxies
+      const inventoryQuery = query(
+        collection(db, 'proxyInventory'), 
+        where('planId', '==', planId), 
+        where('isAssigned', '==', false),
+        limit(quantity)
+      );
+      const inventorySnap = await getDocs(inventoryQuery);
+      if (inventorySnap.size < quantity) throw new Error('Not enough proxies available in inventory');
+      
+      // 4. Update Balance
+      transaction.update(userRef, {
+        walletBalance: user.walletBalance - totalPrice
+      });
+      
+      // 5. Update Stock
+      transaction.update(planRef, {
+        stock: plan.stock - quantity
+      });
+
+      // 6. Update Coupon Usage
+      if (couponId) {
+        const cRef = doc(db, 'coupons', couponId);
+        const cSnap = await transaction.get(cRef);
+        transaction.update(cRef, {
+          usedCount: (cSnap.data()?.usedCount || 0) + 1
+        });
+      }
+      
+      // 7. Create Order
+      const orderRef = doc(collection(db, 'orders'));
+      const expiryDate = new Date();
+      expiryDate.setDate(expiryDate.getDate() + plan.duration);
+      
+      transaction.set(orderRef, {
+        uid,
+        userName: user.displayName || 'User',
+        planId,
+        planTitle: plan.title,
+        amount: totalPrice,
+        unitPrice,
+        quantity,
+        discountAmount: totalDiscount,
+        couponCode: couponCode || null,
+        proxyIds: inventorySnap.docs.map(d => d.id),
+        status: 'active',
+        purchaseDate: serverTimestamp(),
+        expiryDate: expiryDate.toISOString(),
+        createdAt: serverTimestamp()
+      });
+      
+      // 8. Assign Proxies
+      for (const proxyDoc of inventorySnap.docs) {
+        // Re-verify each proxy inside transaction
+        const tProxySnap = await transaction.get(proxyDoc.ref);
+        if (tProxySnap.data()?.isAssigned) throw new Error('One of the proxies was just assigned. Please try again.');
+
+        transaction.update(proxyDoc.ref, {
+          isAssigned: true,
+          status: 'sold',
+          assignedToUid: uid,
+          orderId: orderRef.id,
+          planTitle: plan.title,
+          expiryDate: expiryDate.toISOString()
+        });
+      }
+      
+      // 9. Create Wallet Transaction
+      const walletTxRef = doc(collection(db, 'walletTransactions'));
+      transaction.set(walletTxRef, {
+        uid,
+        amount: -totalPrice,
+        type: 'purchase',
+        status: 'completed',
+        description: `Purchased ${quantity}x ${plan.title}${couponCode ? ` (Coupon: ${couponCode})` : ''}`,
+        createdAt: serverTimestamp()
+      });
+      
+      return orderRef.id;
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, 'buyProxiesBulkAtomic');
+  }
+};
+
+// Atomic Custom Bulk Purchase (Used by BuyProxy.tsx)
+export const buyCustomProxiesAtomic = async (data: {
+  uid: string;
+  serverId: string;
+  type: string;
+  speed: string;
+  durationDays: number;
+  quantity: number;
+  finalPrice: number;
+  planTitle: string;
+}) => {
+  try {
+    return await runTransaction(db, async (transaction) => {
+      // 1. Get User
+      const userRef = doc(db, 'users', data.uid);
+      const userSnap = await transaction.get(userRef);
+      if (!userSnap.exists()) throw new Error('User not found');
+      const user = userSnap.data();
+      
+      if (user.walletBalance < data.finalPrice) throw new Error('Insufficient balance');
+      
+      // 2. Get available proxies
+      const inventoryQuery = query(
+        collection(db, 'proxyInventory'), 
+        where('isAssigned', '==', false),
+        where('serverId', '==', data.serverId),
+        where('type', '==', data.type),
+        where('speed', '==', data.speed),
+        limit(data.quantity)
+      );
+      const inventorySnap = await getDocs(inventoryQuery);
+      if (inventorySnap.size < data.quantity) throw new Error('Not enough proxies available in inventory');
+      
+      // 3. Update Balance
+      transaction.update(userRef, {
+        walletBalance: user.walletBalance - data.finalPrice
+      });
+      
+      // 4. Create Order
+      const orderRef = doc(collection(db, 'orders'));
+      const expiryDate = new Date();
+      expiryDate.setDate(expiryDate.getDate() + data.durationDays);
+      
+      transaction.set(orderRef, {
+        uid: data.uid,
+        userName: user.displayName || 'User',
+        userEmail: user.email,
+        proxyIds: inventorySnap.docs.map(d => d.id),
+        quantity: data.quantity,
+        planTitle: data.planTitle,
+        amount: data.finalPrice,
+        status: 'completed',
+        purchaseDate: serverTimestamp(),
+        expiryDate: expiryDate.toISOString(),
+        createdAt: serverTimestamp()
+      });
+      
+      // 5. Assign Proxies
+      for (const proxyDoc of inventorySnap.docs) {
+        // Re-verify each proxy inside transaction
+        const tProxySnap = await transaction.get(proxyDoc.ref);
+        if (tProxySnap.data()?.isAssigned) throw new Error('One of the proxies was just assigned. Please try again.');
+
+        transaction.update(proxyDoc.ref, {
+          isAssigned: true,
+          status: 'sold',
+          assignedToUid: data.uid,
+          assignedToEmail: user.email,
+          assignedAt: serverTimestamp(),
+          orderId: orderRef.id,
+          planTitle: data.planTitle,
+          type: data.type,
+          speed: data.speed,
+          expiryDate: expiryDate.toISOString(),
+          autoRenew: false
+        });
+      }
+      
+      // 6. Create Wallet Transaction
+      const walletTxRef = doc(collection(db, 'walletTransactions'));
+      transaction.set(walletTxRef, {
+        uid: data.uid,
+        amount: -data.finalPrice,
+        type: 'purchase',
+        status: 'completed',
+        description: `Purchased ${data.quantity}x ${data.planTitle}`,
+        createdAt: serverTimestamp()
+      });
+      
+      return orderRef.id;
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, 'buyCustomProxiesAtomic');
   }
 };
 

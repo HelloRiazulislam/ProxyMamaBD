@@ -11,6 +11,24 @@ export interface ActivityLog {
 }
 
 export const logActivity = async (action: string, details: string, profile?: any) => {
+  // Only log important actions to save Firestore write quota
+  const importantActions = [
+    'Proxy Purchase',
+    'Deposit Request',
+    'Gift Card Redeem',
+    'Reseller Request',
+    'Support Ticket',
+    'Registration',
+    'admin_balance_adjustment',
+    'admin_maintenance',
+    'clash_subscription_purchase',
+    'Free Proxy Claim'
+  ];
+
+  if (!importantActions.includes(action)) {
+    return;
+  }
+
   try {
     await addDoc(collection(db, 'activityLogs'), {
       uid: profile?.uid || 'guest',

@@ -15,7 +15,8 @@ export default function ProxyServers() {
   const [formData, setFormData] = useState({
     name: '',
     status: 'active',
-    description: ''
+    description: '',
+    location: ''
   });
 
   useEffect(() => {
@@ -55,7 +56,8 @@ export default function ProxyServers() {
     setFormData({
       name: '',
       status: 'active',
-      description: ''
+      description: '',
+      location: ''
     });
     setEditingItem(null);
   };
@@ -65,7 +67,8 @@ export default function ProxyServers() {
     setFormData({
       name: item.name,
       status: item.status,
-      description: item.description || ''
+      description: item.description || '',
+      location: item.location || ''
     });
     setIsModalOpen(true);
   };
@@ -173,6 +176,17 @@ export default function ProxyServers() {
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
                   placeholder="e.g. Premium BD Server 01"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.location}
+                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                  placeholder="e.g. Bangladesh"
                 />
               </div>
               <div>

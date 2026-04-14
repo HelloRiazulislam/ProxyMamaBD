@@ -127,6 +127,16 @@ export default function Reseller() {
               </div>
             </div>
 
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Reseller Rules</h2>
+              <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400 list-disc pl-5">
+                <li>Minimum 1000tk balance must be added to your account.</li>
+                <li>You must have a valid use case for the proxies.</li>
+                <li>Applications are reviewed manually by our team.</li>
+                <li>Reseller status is subject to approval.</li>
+              </ul>
+            </div>
+
             {hasPendingRequest ? (
               <div className="bg-yellow-50 dark:bg-yellow-900/20 p-6 rounded-2xl border border-yellow-100 dark:border-yellow-800/30">
                 <div className="flex items-center gap-3 mb-2">

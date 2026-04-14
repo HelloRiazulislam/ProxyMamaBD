@@ -24,7 +24,6 @@ export default function ProxyInventory() {
     username: '',
     password: '',
     status: 'available',
-    location: 'Bangladesh',
     type: 'SOCKS5',
     speed: '50mbps',
     serverId: ''
@@ -94,7 +93,6 @@ export default function ProxyInventory() {
             username,
             password,
             status: 'available',
-            location: formData.location,
             type: formData.type,
             speed: formData.speed,
             serverId: formData.serverId,
@@ -141,7 +139,6 @@ export default function ProxyInventory() {
       username: '',
       password: '',
       status: 'available',
-      location: 'Bangladesh',
       type: 'SOCKS5',
       speed: '50mbps',
       serverId: ''
@@ -159,7 +156,6 @@ export default function ProxyInventory() {
       username: item.username,
       password: item.password,
       status: item.status,
-      location: item.location,
       type: item.type,
       speed: item.speed || '50mbps',
       serverId: item.serverId || ''
@@ -327,7 +323,7 @@ export default function ProxyInventory() {
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto overflow-y-auto max-h-[65vh] scrollbar-thin scrollbar-thumb-gray-200">
-          <table className="w-full text-left border-collapse relative">
+              <table className="w-full text-left border-collapse relative">
             <thead className="bg-gray-50 text-xs text-gray-500 uppercase font-bold sticky top-0 z-10">
               <tr>
                 <th className="px-6 py-4 overflow-hidden resize-x border-r border-gray-100 min-w-[150px] whitespace-nowrap">Server</th>
@@ -342,7 +338,7 @@ export default function ProxyInventory() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
-                <tr><td colSpan={5} className="px-6 py-12 text-center text-gray-500">Loading inventory...</td></tr>
+                <tr><td colSpan={8} className="px-6 py-12 text-center text-gray-500">Loading inventory...</td></tr>
               ) : filteredInventory.length > 0 ? (
                 filteredInventory.map((item) => (
                   <tr key={item.id} className="hover:bg-gray-50 transition-colors text-sm">
@@ -401,7 +397,7 @@ export default function ProxyInventory() {
                   </tr>
                 ))
               ) : (
-                <tr><td colSpan={5} className="px-6 py-12 text-center text-gray-500">No proxies found.</td></tr>
+                <tr><td colSpan={8} className="px-6 py-12 text-center text-gray-500">No proxies found.</td></tr>
               )}
             </tbody>
           </table>
@@ -450,7 +446,7 @@ export default function ProxyInventory() {
                   >
                     <option value="">Choose a Server</option>
                     {servers.map(s => (
-                      <option key={s.id} value={s.id}>{s.name} ({s.location})</option>
+                      <option key={s.id} value={s.id}>{s.name}</option>
                     ))}
                   </select>
                 </div>

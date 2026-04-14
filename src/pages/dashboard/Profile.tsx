@@ -16,6 +16,16 @@ export default function Profile() {
   const [copied, setCopied] = useState(false);
   const [realtimeOrders, setRealtimeOrders] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+
+  const handleLogoutClick = () => {
+    setIsLogoutModalOpen(true);
+  };
+
+  const confirmLogout = () => {
+    setIsLogoutModalOpen(false);
+    logout();
+  };
 
   useEffect(() => {
     if (!profile?.uid) return;
@@ -296,13 +306,44 @@ export default function Profile() {
           </div>
 
           <button
-            onClick={logout}
+            onClick={handleLogoutClick}
             className="w-full py-4 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 font-black rounded-2xl hover:bg-red-100 dark:hover:bg-red-900/20 transition-all flex items-center justify-center border-2 border-red-100 dark:border-red-900/20 active:scale-95"
           >
             <LogOut size={20} className="mr-2" /> LOGOUT ACCOUNT
           </button>
         </div>
       </div>
+
+      {/* Logout Confirmation Modal */}
+      {isLogoutModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden border border-gray-100 dark:border-slate-800">
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                <LogOut size={32} className="text-red-600 dark:text-red-400" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Confirm Logout</h3>
+              <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
+                Are you sure you want to log out of your account?
+              </p>
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setIsLogoutModalOpen(false)}
+                  className="flex-1 py-3 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 font-bold rounded-xl hover:bg-gray-200 dark:hover:bg-slate-700 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmLogout}
+                  className="flex-1 py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-all shadow-lg shadow-red-200 dark:shadow-none"
+                >
+                  Logout
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

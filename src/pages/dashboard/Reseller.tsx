@@ -34,6 +34,11 @@ export default function Reseller() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile) return;
+    
+    if (!note.trim()) {
+      toast.error('Please provide a note explaining how you plan to use/sell the proxies.');
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -138,9 +143,10 @@ export default function Reseller() {
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      How do you plan to use/sell the proxies? (Optional)
+                      How do you plan to use/sell the proxies? <span className="text-red-500">*</span>
                     </label>
                     <textarea
+                      required
                       value={note}
                       onChange={(e) => setNote(e.target.value)}
                       rows={4}

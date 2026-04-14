@@ -74,7 +74,8 @@ export default function Dashboard() {
     const inventoryQuery = query(
       collection(db, 'proxyInventory'),
       where('assignedToUid', '==', profile.uid),
-      where('isAssigned', '==', true)
+      where('isAssigned', '==', true),
+      limit(50)
     );
     const unsubInventory = onSnapshot(inventoryQuery, (snap) => {
       const expiring = snap.docs

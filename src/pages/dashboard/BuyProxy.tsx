@@ -41,6 +41,22 @@ export default function BuyProxy() {
   const [loading, setLoading] = useState(false);
   const [availableCount, setAvailableCount] = useState(0);
 
+  const [serverInventory, setServerInventory] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'proxyInventory'), (snap) => {
+      const inventoryCounts: Record<string, number> = {};
+      snap.docs.forEach(doc => {
+        const data = doc.data();
+        if (!data.isAssigned && data.serverId) {
+          inventoryCounts[data.serverId] = (inventoryCounts[data.serverId] || 0) + 1;
+        }
+      });
+      setServerInventory(inventoryCounts);
+    });
+    return () => unsub();
+  }, []);
+
   useEffect(() => {
     const q = query(collection(db, 'proxyServers'), where('status', '==', 'active'));
     const unsub = onSnapshot(q, (snap) => {
@@ -60,23 +76,12 @@ export default function BuyProxy() {
   const savings = Math.round(discountAmount);
 
   useEffect(() => {
-    fetchAvailableCount();
-  }, [selectedSpeed, selectedType, selectedServer]);
-
-  const fetchAvailableCount = async () => {
-    if (!selectedServer) return;
-    try {
-      const q = query(
-        collection(db, 'proxyInventory'),
-        where('isAssigned', '==', false),
-        where('serverId', '==', selectedServer.id)
-      );
-      const snap = await getDocs(q);
-      setAvailableCount(snap.size);
-    } catch (error) {
-      console.error('Error fetching inventory:', error);
+    if (selectedServer) {
+      setAvailableCount(serverInventory[selectedServer.id] || 0);
+    } else {
+      setAvailableCount(0);
     }
-  };
+  }, [selectedServer, serverInventory]);
 
   const handlePurchase = async () => {
     if (!profile || !selectedServer) return;
@@ -216,11 +221,14 @@ export default function BuyProxy() {
                 className="w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none dark:text-white font-bold appearance-none"
               >
                 <option value="" disabled>Select a server</option>
-                {servers.map((server) => (
-                  <option key={server.id} value={server.id}>
-                    {server.name}
-                  </option>
-                ))}
+                {servers.map((server) => {
+                  const count = serverInventory[server.id] || 0;
+                  return (
+                    <option key={server.id} value={server.id} disabled={count === 0}>
+                      {server.name} {count === 0 ? '(Out of Stock)' : `(${count} Available)`}
+                    </option>
+                  );
+                })}
               </select>
               <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                 <Globe size={20} />

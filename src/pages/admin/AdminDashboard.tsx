@@ -50,7 +50,19 @@ export default function AdminDashboard() {
   const [planDistribution, setPlanDistribution] = useState<any[]>([]);
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
 
+  const [activeUsers, setActiveUsers] = useState<any[]>([]);
+
   useEffect(() => {
+    // Active Users (last 15 minutes)
+    const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000);
+    const qActive = query(
+      collection(db, 'users'),
+      where('lastActiveAt', '>=', fifteenMinsAgo)
+    );
+    const unsubActive = onSnapshot(qActive, (snap) => {
+      setActiveUsers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
     // Users
     const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
       setStats(prev => ({ ...prev, totalUsers: snap.size }));
@@ -111,6 +123,7 @@ export default function AdminDashboard() {
     });
 
     return () => {
+      unsubActive();
       unsubUsers();
       unsubOrders();
       unsubStock();
@@ -289,8 +302,45 @@ export default function AdminDashboard() {
           </div>
         </div>
 
+        {/* Active Users */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+            <h2 className="font-bold text-gray-900 flex items-center">
+              <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
+              Active Users ({activeUsers.length})
+            </h2>
+          </div>
+          <div className="overflow-x-auto overflow-y-auto max-h-[300px] scrollbar-thin scrollbar-thumb-gray-200">
+            <div className="divide-y divide-gray-100">
+              {activeUsers.length > 0 ? (
+                activeUsers.map((user) => (
+                  <div key={user.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 bg-green-50 rounded-full flex items-center justify-center text-green-600 font-bold text-xs">
+                        {user.email?.[0].toUpperCase() || '?'}
+                      </div>
+                      <div>
+                        <div className="font-medium text-gray-900 text-sm">{user.displayName || 'Unknown'}</div>
+                        <div className="text-xs text-gray-500">{user.email}</div>
+                      </div>
+                    </div>
+                    <div className="text-xs text-green-600 font-medium bg-green-50 px-2 py-1 rounded-full">
+                      Online
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-8 text-center text-gray-500">
+                  <Users className="mx-auto mb-3 text-gray-300" size={32} />
+                  <p className="text-sm">No active users right now</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
         {/* Recent Activity */}
-        <div className="lg:col-span-3 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="p-6 border-b border-gray-100 flex items-center justify-between">
             <h2 className="font-bold text-gray-900">Recent Platform Activity</h2>
           </div>

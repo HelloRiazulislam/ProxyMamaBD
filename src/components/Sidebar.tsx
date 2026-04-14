@@ -157,10 +157,13 @@ export default function Sidebar({ role }: SidebarProps) {
     { name: 'Announcements', icon: Megaphone, path: '/admin/announcements' },
     { name: 'Support', icon: MessageSquare, path: '/admin/support', badge: openTicketsCount },
     { name: 'Notifications', icon: Bell, path: '/admin/notifications' },
+    { name: 'Activity Logs', icon: Activity, path: '/admin/activity-logs' },
     { name: 'Settings', icon: Settings, path: '/admin/settings' },
   ];
 
   const links = role === 'admin' ? adminLinks : userLinks;
+
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const handleLogout = async () => {
     if (profile) {
@@ -223,7 +226,7 @@ export default function Sidebar({ role }: SidebarProps) {
 
           <div className="p-4 border-t border-gray-200 dark:border-slate-800 flex items-center justify-between gap-2">
             <button
-              onClick={handleLogout}
+              onClick={() => setShowLogoutModal(true)}
               className="flex-1 flex items-center justify-center px-4 py-3 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
               title={t.logout}
             >
@@ -247,6 +250,37 @@ export default function Sidebar({ role }: SidebarProps) {
           onClick={() => setIsOpen(false)}
           className="fixed inset-0 z-30 bg-gray-900/50 lg:hidden"
         />
+      )}
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 w-full max-w-sm shadow-xl border border-gray-200 dark:border-slate-800">
+            <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-100 dark:bg-red-900/30 rounded-full">
+              <LogOut className="text-red-600 dark:text-red-400" size={24} />
+            </div>
+            <h3 className="text-lg font-bold text-center text-gray-900 dark:text-white mb-2">
+              Confirm Logout
+            </h3>
+            <p className="text-sm text-center text-gray-500 dark:text-gray-400 mb-6">
+              Are you sure you want to log out of your account?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-800 rounded-xl hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleLogout}
+                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors"
+              >
+                Log Out
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

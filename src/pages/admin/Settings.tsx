@@ -14,6 +14,7 @@ export default function AdminSettings() {
     supportEmail: 'support@proxymama.com',
     maintenanceMode: false,
     referralBonusPercentage: 10,
+    resellerDiscountPercentage: 20,
     minDepositAmount: 100,
     paymentMethods: {
       bkash: '',
@@ -433,6 +434,15 @@ export default function AdminSettings() {
                       type="number"
                       value={settings.referralBonusPercentage}
                       onChange={(e) => setSettings({ ...settings, referralBonusPercentage: Number(e.target.value) })}
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Reseller Discount (%)</label>
+                    <input
+                      type="number"
+                      value={settings.resellerDiscountPercentage}
+                      onChange={(e) => setSettings({ ...settings, resellerDiscountPercentage: Number(e.target.value) })}
                       className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
                     />
                   </div>

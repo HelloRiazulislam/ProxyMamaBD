@@ -3,7 +3,7 @@ import { useAuth } from '../../App';
 import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { format, isAfter, differenceInHours } from 'date-fns';
-import { ShieldCheck, Copy, Eye, EyeOff, Clock, Globe, Zap, AlertCircle, ShoppingCart, QrCode, X as CloseIcon, Download } from 'lucide-react';
+import { ShieldCheck, Copy, Eye, EyeOff, Clock, Globe, Zap, AlertCircle, ShoppingCart, QrCode, X as CloseIcon, Download, FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { cn } from '../../lib/utils';
@@ -149,6 +149,31 @@ export default function MyProxies() {
     }
   };
 
+  const handleExportProxies = () => {
+    if (proxies.length === 0) {
+      toast.error('No proxies to export.');
+      return;
+    }
+
+    const proxyList = proxies.map(p => {
+      if (p.type === 'HTTP') {
+        return `${p.host}:${p.port}`;
+      }
+      return `${p.host}:${p.port}:${p.username}:${p.password}`;
+    }).join('\n');
+
+    const blob = new Blob([proxyList], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `proxymama_proxies_${format(new Date(), 'yyyy-MM-dd')}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success('Proxies exported successfully!');
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -156,13 +181,24 @@ export default function MyProxies() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">My Proxies</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm">Manage and use your purchased proxies.</p>
         </div>
-        <Link 
-          to="/dashboard/buy-proxy"
-          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 dark:shadow-none"
-        >
-          <ShoppingCart size={18} className="mr-2" />
-          Buy New Proxy
-        </Link>
+        <div className="flex items-center gap-3">
+          {profile?.isReseller && proxies.length > 0 && (
+            <button 
+              onClick={handleExportProxies}
+              className="inline-flex items-center px-4 py-2 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 text-sm font-bold rounded-xl hover:bg-gray-200 dark:hover:bg-slate-700 transition-all"
+            >
+              <FileText size={18} className="mr-2" />
+              Export TXT
+            </button>
+          )}
+          <Link 
+            to="/dashboard/buy-proxy"
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 dark:shadow-none"
+          >
+            <ShoppingCart size={18} className="mr-2" />
+            Buy New Proxy
+          </Link>
+        </div>
       </div>
 
       {loading ? (

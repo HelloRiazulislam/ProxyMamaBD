@@ -43,6 +43,7 @@ import UserNotifications from './pages/dashboard/Notifications';
 import UserActivityLog from './pages/dashboard/ActivityLog';
 import UserProfile from './pages/dashboard/Profile';
 import Affiliate from './pages/dashboard/Affiliate';
+import Reseller from './pages/dashboard/Reseller';
 import Support from './pages/dashboard/Support';
 import TicketDetails from './pages/dashboard/TicketDetails';
 
@@ -53,6 +54,7 @@ import AdminUsers from './pages/admin/Users';
 import AdminProxyInventory from './pages/admin/ProxyInventory';
 import AdminProxyTracking from './pages/admin/ProxyTracking';
 import AdminBalanceRequests from './pages/admin/BalanceRequests';
+import AdminResellerRequests from './pages/admin/ResellerRequests';
 import AdminOrders from './pages/admin/Orders';
 import AdminWalletTransactions from './pages/admin/WalletTransactions';
 import AdminNotifications from './pages/admin/Notifications';
@@ -87,6 +89,7 @@ interface UserProfile {
   totalOrders?: number;
   isVerified?: boolean;
   isBanned?: boolean;
+  isReseller?: boolean;
   onboardingCompleted?: boolean;
   lastReadNotificationAt?: any;
   readNotifications?: string[];
@@ -344,6 +347,7 @@ export default function App() {
             <Route path="activity-log" element={<UserActivityLog />} />
             <Route path="profile" element={<UserProfile />} />
             <Route path="affiliate" element={<Affiliate />} />
+            <Route path="reseller" element={<Reseller />} />
             <Route path="support" element={<Support />} />
             <Route path="support/:id" element={<TicketDetails />} />
           </Route>
@@ -356,6 +360,7 @@ export default function App() {
             <Route path="proxy-servers" element={<AdminProxyServers />} />
             <Route path="proxy-tracking" element={<AdminProxyTracking />} />
             <Route path="balance-requests" element={<AdminBalanceRequests />} />
+            <Route path="reseller-requests" element={<AdminResellerRequests />} />
             <Route path="orders" element={<AdminOrders />} />
             <Route path="wallet-transactions" element={<AdminWalletTransactions />} />
             <Route path="notifications" element={<AdminNotifications />} />

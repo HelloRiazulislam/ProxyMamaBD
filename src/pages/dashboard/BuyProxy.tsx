@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../../App';
+import { useAuth, useSettings } from '../../App';
 import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc, increment, onSnapshot } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { toast } from 'react-hot-toast';
-import { ShoppingCart, Zap, Globe, Clock, ShieldCheck, Tag, TrendingDown, Check, AlertTriangle, Server } from 'lucide-react';
+import { ShoppingCart, Zap, Globe, Clock, ShieldCheck, Tag, TrendingDown, Check, AlertTriangle, Server, Package } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { logActivity } from '../../services/activityService';
@@ -32,12 +32,14 @@ const DURATIONS = [
 
 export default function BuyProxy() {
   const { profile } = useAuth();
+  const { settings } = useSettings();
   const navigate = useNavigate();
   const [servers, setServers] = useState<any[]>([]);
   const [selectedServer, setSelectedServer] = useState<any>(null);
   const [selectedType, setSelectedType] = useState(PROXY_TYPES[0]);
   const [selectedSpeed, setSelectedSpeed] = useState(SPEEDS[0]);
   const [selectedDuration, setSelectedDuration] = useState(DURATIONS[1]);
+  const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(false);
   const [availableCount, setAvailableCount] = useState(0);
 
@@ -49,7 +51,8 @@ export default function BuyProxy() {
       snap.docs.forEach(doc => {
         const data = doc.data();
         if (!data.isAssigned && data.serverId) {
-          inventoryCounts[data.serverId] = (inventoryCounts[data.serverId] || 0) + 1;
+          const key = `${data.serverId}_${data.type}_${data.speed}`;
+          inventoryCounts[key] = (inventoryCounts[key] || 0) + 1;
         }
       });
       setServerInventory(inventoryCounts);
@@ -70,21 +73,33 @@ export default function BuyProxy() {
   }, []);
 
   // Calculate prices
-  const baseTotal = selectedSpeed.basePrice * selectedDuration.multiplier;
-  const discountAmount = (baseTotal * selectedDuration.discount) / 100;
+  const baseTotal = selectedSpeed.basePrice * selectedDuration.multiplier * quantity;
+  const durationDiscountAmount = (baseTotal * selectedDuration.discount) / 100;
+  
+  let resellerDiscountAmount = 0;
+  if (profile?.isReseller && settings?.resellerDiscountPercentage) {
+    resellerDiscountAmount = ((baseTotal - durationDiscountAmount) * settings.resellerDiscountPercentage) / 100;
+  }
+
+  const discountAmount = durationDiscountAmount + resellerDiscountAmount;
   const finalPrice = Math.round(baseTotal - discountAmount);
   const savings = Math.round(discountAmount);
 
   useEffect(() => {
     if (selectedServer) {
-      setAvailableCount(serverInventory[selectedServer.id] || 0);
+      const key = `${selectedServer.id}_${selectedType.id}_${selectedSpeed.id}`;
+      setAvailableCount(serverInventory[key] || 0);
     } else {
       setAvailableCount(0);
     }
-  }, [selectedServer, serverInventory]);
+  }, [selectedServer, selectedType, selectedSpeed, serverInventory]);
 
   const handlePurchase = async () => {
     if (!profile || !selectedServer) return;
+    if (quantity > availableCount) {
+      toast.error(`Only ${availableCount} proxies available on this server.`);
+      return;
+    }
     if (profile.walletBalance < finalPrice) {
       toast.error('Insufficient balance. Please add balance first.');
       navigate('/dashboard/add-balance');
@@ -93,26 +108,28 @@ export default function BuyProxy() {
 
     setLoading(true);
     try {
-      // 1. Get an available proxy with matching server
+      // 1. Get available proxies
       const q = query(
         collection(db, 'proxyInventory'),
         where('isAssigned', '==', false),
-        where('serverId', '==', selectedServer.id)
+        where('serverId', '==', selectedServer.id),
+        where('type', '==', selectedType.id),
+        where('speed', '==', selectedSpeed.id)
       );
       const snap = await getDocs(q);
       
-      if (snap.empty) {
-        throw new Error(`No proxies available on ${selectedServer.name} at the moment.`);
+      if (snap.size < quantity) {
+        throw new Error(`Not enough proxies available. Only ${snap.size} left.`);
       }
       
-      const proxyDoc = snap.docs[0];
+      const proxyDocs = snap.docs.slice(0, quantity);
 
       // 2. Update proxy inventory
       const expiryDate = new Date();
       expiryDate.setDate(expiryDate.getDate() + selectedDuration.days);
 
-      try {
-        await updateDoc(proxyDoc.ref, {
+      const updatePromises = proxyDocs.map(proxyDoc => 
+        updateDoc(proxyDoc.ref, {
           isAssigned: true,
           assignedToUid: profile.uid,
           assignedToEmail: profile.email,
@@ -123,10 +140,14 @@ export default function BuyProxy() {
           speed: selectedSpeed.id,
           orderId: 'PENDING', // Temporary ID
           autoRenew: false
-        });
+        })
+      );
+
+      try {
+        await Promise.all(updatePromises);
       } catch (err: any) {
         console.error("Inventory update failed:", err);
-        throw new Error("Failed to reserve proxy. Please try again.");
+        throw new Error("Failed to reserve proxies. Please try again.");
       }
 
       // 3. Deduct balance
@@ -137,16 +158,19 @@ export default function BuyProxy() {
       } catch (err: any) {
         console.error("Balance deduction failed:", err);
         // Rollback inventory if balance deduction fails
-        await updateDoc(proxyDoc.ref, {
-          isAssigned: false,
-          assignedToUid: '',
-          assignedToEmail: '',
-          assignedAt: null,
-          expiryDate: '',
-          planTitle: '',
-          orderId: '',
-          autoRenew: false
-        });
+        const rollbackPromises = proxyDocs.map(proxyDoc => 
+          updateDoc(proxyDoc.ref, {
+            isAssigned: false,
+            assignedToUid: '',
+            assignedToEmail: '',
+            assignedAt: null,
+            expiryDate: '',
+            planTitle: '',
+            orderId: '',
+            autoRenew: false
+          })
+        );
+        await Promise.all(rollbackPromises);
         throw new Error("Failed to process payment. Please check your balance.");
       }
 
@@ -156,7 +180,8 @@ export default function BuyProxy() {
         const orderRef = await addDoc(collection(db, 'orders'), {
           uid: profile.uid,
           userEmail: profile.email,
-          proxyId: proxyDoc.id,
+          proxyIds: proxyDocs.map(d => d.id),
+          quantity,
           planTitle: `${selectedType.label} - ${selectedSpeed.label} - ${selectedDuration.label}`,
           amount: finalPrice,
           status: 'completed',
@@ -164,24 +189,25 @@ export default function BuyProxy() {
         });
         orderId = orderRef.id;
         
-        // Update proxy with real order ID
-        await updateDoc(proxyDoc.ref, { orderId });
+        // Update proxies with real order ID
+        const finalUpdatePromises = proxyDocs.map(proxyDoc => 
+          updateDoc(proxyDoc.ref, { orderId })
+        );
+        await Promise.all(finalUpdatePromises);
       } catch (err: any) {
         console.error("Order creation failed:", err);
-        // This is a critical state - balance deducted but order failed
-        // We still have the proxy assigned, so we'll try to show it
       }
 
       // 5. Log activity
       try {
         await logActivity(
           'Proxy Purchase',
-          `Purchased ${selectedType.label} ${selectedSpeed.label} for ${selectedDuration.label} (৳${finalPrice})`,
+          `Purchased ${quantity}x ${selectedType.label} ${selectedSpeed.label} for ${selectedDuration.label} (৳${finalPrice})`,
           profile
         );
       } catch (err) {}
 
-      toast.success('Proxy purchased successfully!');
+      toast.success(`Successfully purchased ${quantity} prox${quantity > 1 ? 'ies' : 'y'}!`);
       navigate('/dashboard/my-proxies');
     } catch (error: any) {
       console.error("Purchase error:", error);
@@ -198,9 +224,21 @@ export default function BuyProxy() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Customize Your Proxy</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm">Select your preferred speed and duration.</p>
         </div>
-        <div className="flex items-center space-x-2 text-sm font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-4 py-2 rounded-xl">
-          <Globe size={16} />
-          <span>{availableCount} Proxies Available</span>
+        <div className={cn(
+          "flex items-center space-x-2 text-sm font-medium px-4 py-2 rounded-xl",
+          availableCount > 0 ? "text-blue-600 bg-blue-50 dark:bg-blue-900/20" : "text-red-600 bg-red-50 dark:bg-red-900/20"
+        )}>
+          {availableCount > 0 ? (
+            <>
+              <Globe size={16} />
+              <span>{availableCount} Proxies Available</span>
+            </>
+          ) : (
+            <>
+              <AlertTriangle size={16} />
+              <span>Not Available</span>
+            </>
+          )}
         </div>
       </div>
 
@@ -221,14 +259,11 @@ export default function BuyProxy() {
                 className="w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none dark:text-white font-bold appearance-none"
               >
                 <option value="" disabled>Select a server</option>
-                {servers.map((server) => {
-                  const count = serverInventory[server.id] || 0;
-                  return (
-                    <option key={server.id} value={server.id} disabled={count === 0}>
-                      {server.name} {count === 0 ? '(Out of Stock)' : `(${count} Available)`}
-                    </option>
-                  );
-                })}
+                {servers.map((server) => (
+                  <option key={server.id} value={server.id}>
+                    {server.name}
+                  </option>
+                ))}
               </select>
               <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                 <Globe size={20} />
@@ -391,6 +426,38 @@ export default function BuyProxy() {
           </div>
 
 
+          {/* Quantity Selection (Resellers Only) */}
+          {profile?.isReseller && (
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm">
+              <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                <Package size={16} className="text-indigo-500" />
+                5. Quantity (Bulk Purchase)
+              </h2>
+              
+              <div className="flex items-center gap-4">
+                <input
+                  type="range"
+                  min="1"
+                  max={Math.min(50, availableCount || 1)}
+                  value={quantity}
+                  onChange={(e) => setQuantity(Number(e.target.value))}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+                />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="1"
+                    max={Math.min(50, availableCount || 1)}
+                    value={quantity}
+                    onChange={(e) => setQuantity(Math.min(Math.max(1, Number(e.target.value)), Math.min(50, availableCount || 1)))}
+                    className="w-20 px-3 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none dark:text-white font-bold text-center"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">Maximum 50 proxies per order.</p>
+            </div>
+          )}
+
         </div>
 
         {/* Right Side: Summary */}
@@ -415,17 +482,31 @@ export default function BuyProxy() {
                 <span className="text-gray-500">Plan Duration</span>
                 <span className="font-bold text-gray-900 dark:text-white">{selectedDuration.label}</span>
               </div>
+              {quantity > 1 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Quantity</span>
+                  <span className="font-bold text-gray-900 dark:text-white">{quantity}x</span>
+                </div>
+              )}
               <div className="pt-4 border-t border-gray-100 dark:border-slate-800">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-500">Subtotal</span>
                   <span className="text-gray-900 dark:text-white font-medium">৳{baseTotal}</span>
                 </div>
-                {savings > 0 && (
+                {durationDiscountAmount > 0 && (
                   <div className="flex justify-between items-center text-green-600 mt-1">
                     <span className="text-xs flex items-center gap-1 font-bold">
-                      <Tag size={12} /> Discount ({selectedDuration.discount}%)
+                      <Tag size={12} /> Duration Discount ({selectedDuration.discount}%)
                     </span>
-                    <span className="text-sm font-bold">-৳{savings}</span>
+                    <span className="text-sm font-bold">-৳{Math.round(durationDiscountAmount)}</span>
+                  </div>
+                )}
+                {resellerDiscountAmount > 0 && (
+                  <div className="flex justify-between items-center text-indigo-600 mt-1">
+                    <span className="text-xs flex items-center gap-1 font-bold">
+                      <Package size={12} /> Reseller Discount ({settings?.resellerDiscountPercentage}%)
+                    </span>
+                    <span className="text-sm font-bold">-৳{Math.round(resellerDiscountAmount)}</span>
                   </div>
                 )}
               </div>

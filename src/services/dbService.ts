@@ -1628,6 +1628,46 @@ export const removeResellerStatus = async (uid: string) => {
   }
 };
 
+export const processResellerRequest = async (requestId: string, uid: string, action: 'approved' | 'rejected', comment?: string) => {
+  try {
+    return await runTransaction(db, async (transaction) => {
+      const requestRef = doc(db, 'resellerRequests', requestId);
+      const userRef = doc(db, 'users', uid);
+      
+      // Update Request
+      transaction.update(requestRef, {
+        status: action,
+        adminComment: comment || null,
+        updatedAt: serverTimestamp()
+      });
+
+      if (action === 'approved') {
+        transaction.update(userRef, {
+          isReseller: true,
+          resellerStatus: 'active',
+          resellerDiscount: 0
+        });
+      }
+
+      // Create Notification
+      const notificationRef = doc(collection(db, 'notifications'));
+      transaction.set(notificationRef, {
+        uid,
+        title: action === 'approved' ? 'Reseller Request Approved! 🎉' : 'Reseller Request Rejected ❌',
+        message: action === 'approved' 
+          ? 'Congratulations! Your reseller application has been approved. You now have access to wholesale pricing.'
+          : `Your reseller application was rejected.${comment ? ` Reason: ${comment}` : ''}`,
+        isRead: false,
+        createdAt: serverTimestamp()
+      });
+
+      await logActivity('admin_reseller_request_process', `Admin ${action} reseller request for UID ${uid}${comment ? `. Reason: ${comment}` : ''}`, { uid: auth.currentUser?.uid });
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, 'resellerRequests');
+  }
+};
+
 export const getUserClashSubscriptions = async (uid: string) => {
   try {
     const q = query(

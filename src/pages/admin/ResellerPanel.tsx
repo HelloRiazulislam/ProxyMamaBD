@@ -6,7 +6,7 @@ import { Store, Check, X, Clock, Search, Users, Shield, ShieldOff, Trash2, Perce
 import { format } from 'date-fns';
 import { logActivity } from '../../services/activityService';
 import { useAuth } from '../../App';
-import { updateResellerStatus, updateResellerDiscount, removeResellerStatus } from '../../services/dbService';
+import { updateResellerStatus, updateResellerDiscount, removeResellerStatus, processResellerRequest } from '../../services/dbService';
 import { cn } from '../../lib/utils';
 
 export default function AdminResellerPanel() {
@@ -18,6 +18,11 @@ export default function AdminResellerPanel() {
   const [searchTerm, setSearchTerm] = useState('');
   const [processingId, setProcessingId] = useState<string | null>(null);
   
+  // Rejection Modal State
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+  const [rejectingRequest, setRejectingRequest] = useState<any>(null);
+  const [rejectionComment, setRejectionComment] = useState('');
+
   // Discount Modal State
   const [selectedReseller, setSelectedReseller] = useState<any>(null);
   const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false);
@@ -45,31 +50,16 @@ export default function AdminResellerPanel() {
     return () => unsub?.();
   }, [activeTab]);
 
-  const handleRequestAction = async (requestId: string, uid: string, userEmail: string, action: 'approved' | 'rejected') => {
+  const handleRequestAction = async (requestId: string, uid: string, userEmail: string, action: 'approved' | 'rejected', comment?: string) => {
     setProcessingId(requestId);
     try {
-      await updateDoc(doc(db, 'resellerRequests', requestId), {
-        status: action,
-        updatedAt: new Date()
-      });
-
-      if (action === 'approved') {
-        await updateDoc(doc(db, 'users', uid), {
-          isReseller: true,
-          resellerStatus: 'active',
-          resellerDiscount: 0
-        });
-      }
-
-      if (profile) {
-        await logActivity(
-          'Reseller Request',
-          `${action === 'approved' ? 'Approved' : 'Rejected'} reseller request for ${userEmail}`,
-          profile
-        );
-      }
-
+      await processResellerRequest(requestId, uid, action, comment);
       toast.success(`Request ${action} successfully`);
+      if (action === 'rejected') {
+        setIsRejectModalOpen(false);
+        setRejectionComment('');
+        setRejectingRequest(null);
+      }
     } catch (error: any) {
       toast.error(error.message || 'Failed to process request');
     } finally {
@@ -217,7 +207,10 @@ export default function AdminResellerPanel() {
                               <Check size={18} />
                             </button>
                             <button
-                              onClick={() => handleRequestAction(req.id, req.uid, req.userEmail, 'rejected')}
+                              onClick={() => {
+                                setRejectingRequest(req);
+                                setIsRejectModalOpen(true);
+                              }}
                               disabled={processingId === req.id}
                               className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
                               title="Reject"
@@ -323,6 +316,59 @@ export default function AdminResellerPanel() {
           )}
         </div>
       </div>
+
+      {/* Rejection Modal */}
+      {isRejectModalOpen && rejectingRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">Reject Reseller Request</h2>
+              <button onClick={() => setIsRejectModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                <X size={24} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="flex items-center p-4 bg-red-50 rounded-2xl mb-4">
+                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mr-3 font-bold text-red-600">
+                  {rejectingRequest.userEmail[0].toUpperCase()}
+                </div>
+                <div>
+                  <div className="font-bold text-red-900">{rejectingRequest.userEmail}</div>
+                  <div className="text-xs text-red-600">UID: {rejectingRequest.uid}</div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Rejection Reason (Optional)</label>
+                <textarea
+                  value={rejectionComment}
+                  onChange={e => setRejectionComment(e.target.value)}
+                  rows={3}
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                  placeholder="Explain why the request is being rejected..."
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setIsRejectModalOpen(false)}
+                  className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleRequestAction(rejectingRequest.id, rejectingRequest.uid, rejectingRequest.userEmail, 'rejected', rejectionComment)}
+                  disabled={processingId === rejectingRequest.id}
+                  className="flex-1 py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-all shadow-lg shadow-red-100 disabled:opacity-50 flex items-center justify-center"
+                >
+                  {processingId === rejectingRequest.id ? <Loader2 className="animate-spin mr-2" size={20} /> : <X className="mr-2" size={20} />}
+                  Reject Request
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Discount Modal */}
       {isDiscountModalOpen && selectedReseller && (

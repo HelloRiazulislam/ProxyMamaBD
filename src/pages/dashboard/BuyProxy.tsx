@@ -77,8 +77,13 @@ export default function BuyProxy() {
   const durationDiscountAmount = (baseTotal * selectedDuration.discount) / 100;
   
   let resellerDiscountAmount = 0;
-  if (profile?.isReseller && settings?.resellerDiscountPercentage) {
-    resellerDiscountAmount = ((baseTotal - durationDiscountAmount) * settings.resellerDiscountPercentage) / 100;
+  const isResellerActive = profile?.isReseller && (profile?.resellerStatus === 'active' || !profile?.resellerStatus);
+  
+  if (isResellerActive) {
+    const discountPercent = profile.resellerDiscount ?? settings?.resellerDiscountPercentage ?? 0;
+    if (discountPercent > 0) {
+      resellerDiscountAmount = ((baseTotal - durationDiscountAmount) * discountPercent) / 100;
+    }
   }
 
   const discountAmount = durationDiscountAmount + resellerDiscountAmount;
@@ -418,7 +423,7 @@ export default function BuyProxy() {
                 {resellerDiscountAmount > 0 && (
                   <div className="flex justify-between items-center text-indigo-600 mt-1">
                     <span className="text-xs flex items-center gap-1 font-bold">
-                      <Package size={12} /> Reseller Discount ({settings?.resellerDiscountPercentage}%)
+                      <Package size={12} /> Reseller Discount ({profile?.resellerDiscount ?? settings?.resellerDiscountPercentage}%)
                     </span>
                     <span className="text-sm font-bold">-৳{Math.round(resellerDiscountAmount)}</span>
                   </div>

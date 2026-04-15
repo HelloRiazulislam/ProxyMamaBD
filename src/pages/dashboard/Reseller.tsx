@@ -3,7 +3,7 @@ import { useAuth } from '../../App';
 import { collection, query, where, getDocs, addDoc, serverTimestamp, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { toast } from 'react-hot-toast';
-import { Store, CheckCircle, Clock, XCircle, AlertTriangle, Send } from 'lucide-react';
+import { Store, CheckCircle, Clock, XCircle, AlertTriangle, Send, Percent } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { logActivity } from '../../services/activityService';
 
@@ -91,6 +91,30 @@ export default function Reseller() {
               </div>
             </div>
             <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-bold">Your Reseller Status:</h3>
+                <span className={cn(
+                  "px-3 py-1 rounded-full text-xs font-bold uppercase",
+                  profile.resellerStatus === 'active' ? "bg-green-500/20 text-green-300" :
+                  profile.resellerStatus === 'suspended' ? "bg-red-500/20 text-red-300" :
+                  "bg-yellow-500/20 text-yellow-300"
+                )}>
+                  {profile.resellerStatus || 'active'}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center mb-6 p-4 bg-white/5 rounded-xl border border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center">
+                    <Percent size={20} />
+                  </div>
+                  <div>
+                    <div className="text-xs text-blue-100">Your Special Discount</div>
+                    <div className="text-xl font-black">{profile.resellerDiscount || 0}%</div>
+                  </div>
+                </div>
+              </div>
+
               <h3 className="font-bold mb-2">Reseller Benefits:</h3>
               <ul className="space-y-2 text-sm text-blue-50">
                 <li className="flex items-center gap-2"><CheckCircle size={16} className="text-green-400" /> Automatic discount on all proxy purchases.</li>

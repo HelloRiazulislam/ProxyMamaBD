@@ -1589,6 +1589,45 @@ export const buyClashSubscription = async (uid: string, planId: string) => {
   }
 };
 
+// Reseller Management
+export const updateResellerStatus = async (uid: string, status: 'active' | 'suspended' | 'on-hold') => {
+  try {
+    const userRef = doc(db, 'users', uid);
+    await updateDoc(userRef, { 
+      resellerStatus: status,
+      isReseller: status === 'active'
+    });
+    
+    await logActivity('admin_reseller_update', `Admin updated reseller status for UID ${uid} to ${status}`, { uid: auth.currentUser?.uid });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `users/${uid}`);
+  }
+};
+
+export const updateResellerDiscount = async (uid: string, discount: number) => {
+  try {
+    const userRef = doc(db, 'users', uid);
+    await updateDoc(userRef, { resellerDiscount: discount });
+    await logActivity('admin_reseller_update', `Admin set reseller discount for UID ${uid} to ${discount}%`, { uid: auth.currentUser?.uid });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `users/${uid}`);
+  }
+};
+
+export const removeResellerStatus = async (uid: string) => {
+  try {
+    const userRef = doc(db, 'users', uid);
+    await updateDoc(userRef, { 
+      isReseller: false,
+      resellerStatus: null,
+      resellerDiscount: 0
+    });
+    await logActivity('admin_reseller_remove', `Admin removed reseller status for UID ${uid}`, { uid: auth.currentUser?.uid });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `users/${uid}`);
+  }
+};
+
 export const getUserClashSubscriptions = async (uid: string) => {
   try {
     const q = query(

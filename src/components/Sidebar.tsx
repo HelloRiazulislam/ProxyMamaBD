@@ -48,6 +48,7 @@ export default function Sidebar({ role }: SidebarProps) {
   const [unreadSupportCount, setUnreadSupportCount] = useState(0);
   const [pendingBalanceCount, setPendingBalanceCount] = useState(0);
   const [openTicketsCount, setOpenTicketsCount] = useState(0);
+  const [pendingResellerCount, setPendingResellerCount] = useState(0);
 
   const { t, theme, toggleTheme } = useSettings();
   const { profile } = useAuth();
@@ -110,6 +111,21 @@ export default function Sidebar({ role }: SidebarProps) {
       unsubTickets = onSnapshot(qt, (snap) => {
         setOpenTicketsCount(snap.size);
       });
+
+      const qr = query(
+        collection(db, 'resellerRequests'),
+        where('status', '==', 'pending')
+      );
+      const unsubReseller = onSnapshot(qr, (snap) => {
+        setPendingResellerCount(snap.size);
+      });
+
+      return () => {
+        unsubNotifications();
+        unsubBalance();
+        unsubTickets();
+        unsubReseller();
+      };
     } else {
       // User unread tickets
       const qt = query(
@@ -150,7 +166,7 @@ export default function Sidebar({ role }: SidebarProps) {
     { name: 'Proxy Inventory', icon: Database, path: '/admin/proxy-inventory' },
     { name: 'Proxy Tracking', icon: Search, path: '/admin/proxy-tracking' },
     { name: 'Balance Requests', icon: CreditCard, path: '/admin/balance-requests', badge: pendingBalanceCount },
-    { name: 'Reseller Requests', icon: Package, path: '/admin/reseller-requests' },
+    { name: 'Reseller Panel', icon: Package, path: '/admin/reseller-requests', badge: pendingResellerCount },
     { name: 'Orders', icon: FileText, path: '/admin/orders' },
     { name: 'Wallet Transactions', icon: History, path: '/admin/wallet-transactions' },
     { name: 'Coupons', icon: Ticket, path: '/admin/coupons' },

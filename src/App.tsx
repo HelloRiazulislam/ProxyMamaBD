@@ -54,7 +54,7 @@ import AdminUsers from './pages/admin/Users';
 import AdminProxyInventory from './pages/admin/ProxyInventory';
 import AdminProxyTracking from './pages/admin/ProxyTracking';
 import AdminBalanceRequests from './pages/admin/BalanceRequests';
-import AdminResellerRequests from './pages/admin/ResellerRequests';
+import AdminResellerPanel from './pages/admin/ResellerPanel';
 import AdminOrders from './pages/admin/Orders';
 import AdminWalletTransactions from './pages/admin/WalletTransactions';
 import AdminNotifications from './pages/admin/Notifications';
@@ -90,6 +90,8 @@ interface UserProfile {
   isVerified?: boolean;
   isBanned?: boolean;
   isReseller?: boolean;
+  resellerStatus?: 'active' | 'suspended' | 'on-hold';
+  resellerDiscount?: number;
   onboardingCompleted?: boolean;
   lastReadNotificationAt?: any;
   readNotifications?: string[];
@@ -350,7 +352,7 @@ export default function App() {
             <Route path="proxy-servers" element={<AdminProxyServers />} />
             <Route path="proxy-tracking" element={<AdminProxyTracking />} />
             <Route path="balance-requests" element={<AdminBalanceRequests />} />
-            <Route path="reseller-requests" element={<AdminResellerRequests />} />
+            <Route path="reseller-requests" element={<AdminResellerPanel />} />
             <Route path="orders" element={<AdminOrders />} />
             <Route path="wallet-transactions" element={<AdminWalletTransactions />} />
             <Route path="notifications" element={<AdminNotifications />} />

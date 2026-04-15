@@ -14,6 +14,7 @@ export default function FreeProxyManager() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [timeLeft, setTimeLeft] = useState<string>('');
+  const [isExpired, setIsExpired] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDuration, setSelectedDuration] = useState(24);
   
@@ -30,10 +31,10 @@ export default function FreeProxyManager() {
     return {
       total: claims.length,
       today: todayClaims,
-      active: campaign?.isActive ? 'ACTIVE' : 'INACTIVE',
+      active: (campaign?.isActive && !isExpired) ? 'ACTIVE' : 'INACTIVE',
       historyCount: history.length
     };
-  }, [claims, campaign, history]);
+  }, [claims, campaign, history, isExpired]);
 
   const filteredClaims = useMemo(() => {
     return claims.filter(c => 
@@ -82,20 +83,46 @@ export default function FreeProxyManager() {
 
     fetchCampaign();
     fetchHistory();
+  }, []);
 
-    // Listen to claims
-    const claimsQuery = query(collection(db, 'freeProxyClaims'), orderBy('claimedAt', 'desc'), limit(50));
+  // Listen to claims based on campaign status
+  useEffect(() => {
+    const isCampaignActive = campaign?.isActive && 
+      campaign?.startTime && 
+      campaign?.endTime && 
+      !isExpired;
+
+    if (!isCampaignActive) {
+      setClaims([]);
+      return;
+    }
+
+    // Convert startTime to Date if it's not already
+    const startTime = campaign.startTime instanceof Date 
+      ? campaign.startTime 
+      : (campaign.startTime?.toDate ? campaign.startTime.toDate() : new Date(campaign.startTime));
+
+    const claimsQuery = query(
+      collection(db, 'freeProxyClaims'), 
+      where('claimedAt', '>=', startTime),
+      orderBy('claimedAt', 'desc'), 
+      limit(1000)
+    );
+
     const unsubClaims = onSnapshot(claimsQuery, (snap) => {
       setClaims(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      console.error("Error listening to claims:", error);
     });
 
     return () => unsubClaims();
-  }, []);
+  }, [campaign?.isActive, campaign?.startTime, campaign?.endTime, isExpired]);
 
   // Timer logic
   useEffect(() => {
     if (!campaign?.isActive || !campaign?.endTime) {
       setTimeLeft('');
+      setIsExpired(false);
       return;
     }
 
@@ -106,11 +133,13 @@ export default function FreeProxyManager() {
 
       if (start && isBefore(now, start)) {
         setTimeLeft(`Starts in ${formatDistanceToNow(start)}`);
+        setIsExpired(false);
       } else if (isAfter(now, end)) {
         setTimeLeft('Expired');
-        // Auto deactivate if expired? Maybe just show expired
+        setIsExpired(true);
       } else {
         setTimeLeft(`Expires in ${formatDistanceToNow(end, { addSuffix: false })}`);
+        setIsExpired(false);
       }
     }, 1000);
 

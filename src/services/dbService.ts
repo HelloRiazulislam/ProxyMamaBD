@@ -1602,8 +1602,7 @@ export const updateResellerStatus = async (uid: string, status: 'active' | 'susp
   try {
     const userRef = doc(db, 'users', uid);
     await updateDoc(userRef, { 
-      resellerStatus: status,
-      isReseller: status === 'active'
+      resellerStatus: status
     });
     
     await logActivity('admin_reseller_update', `Admin updated reseller status for UID ${uid} to ${status}`, { uid: auth.currentUser?.uid });

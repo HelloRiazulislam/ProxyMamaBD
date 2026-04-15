@@ -184,6 +184,11 @@ export default function AdminResellerPanel() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="max-w-xs truncate text-gray-600" title={req.note}>{req.note || '-'}</div>
+                        {req.adminComment && (
+                          <div className="text-[10px] text-red-500 mt-1 italic">
+                            Admin: {req.adminComment}
+                          </div>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         <span className={cn(
@@ -273,7 +278,7 @@ export default function AdminResellerPanel() {
                           >
                             <Percent size={18} />
                           </button>
-                          {res.resellerStatus === 'suspended' ? (
+                          {res.resellerStatus === 'suspended' || res.resellerStatus === 'on-hold' ? (
                             <button
                               onClick={() => handleStatusUpdate(res.uid, 'active')}
                               className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
@@ -290,13 +295,15 @@ export default function AdminResellerPanel() {
                               <ShieldOff size={18} />
                             </button>
                           )}
-                          <button
-                            onClick={() => handleStatusUpdate(res.uid, 'on-hold')}
-                            className="p-2 text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors"
-                            title="Hold"
-                          >
-                            <Clock size={18} />
-                          </button>
+                          {res.resellerStatus !== 'on-hold' && (
+                            <button
+                              onClick={() => handleStatusUpdate(res.uid, 'on-hold')}
+                              className="p-2 text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors"
+                              title="Hold"
+                            >
+                              <Clock size={18} />
+                            </button>
+                          )}
                           <button
                             onClick={() => handleRemoveReseller(res.uid)}
                             className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { collection, query, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, where, getDocs, limit } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { Database, Plus, Edit2, Trash2, Globe, Shield, X, Search, Filter, Clock, AlertCircle, Upload, Download } from 'lucide-react';
@@ -17,6 +17,7 @@ export default function ProxyInventory() {
   const [search, setSearch] = useState('');
   const [filterPlan, setFilterPlan] = useState('all');
   const [filterSpeed, setFilterSpeed] = useState('all');
+  const [filterServer, setFilterServer] = useState('all');
 
   const [formData, setFormData] = useState({
     host: '',
@@ -258,16 +259,39 @@ export default function ProxyInventory() {
     });
   };
 
-  const filteredInventory = inventory.filter(item => 
-    (filterSpeed === 'all' || item.speed === filterSpeed) &&
-    (item.host.includes(search) || item.username.includes(search) || item.id.includes(search))
-  );
-
   const isExpiringSoon = (expiryDate: string) => {
     if (!expiryDate) return false;
     const hoursLeft = differenceInHours(new Date(expiryDate), new Date());
     return hoursLeft > 0 && hoursLeft <= 24;
   };
+
+  const inventoryStats = useMemo(() => {
+    const available = inventory.filter(i => i.status === 'available');
+    
+    const byServer = servers.map(s => ({
+      id: s.id,
+      name: s.name,
+      count: available.filter(i => i.serverId === s.id).length
+    }));
+
+    const bySpeed = ['50mbps', '100mbps', '150mbps'].map(speed => ({
+      name: speed,
+      count: available.filter(i => i.speed === speed).length
+    }));
+
+    const byType = ['SOCKS5', 'HTTP', 'L2TP', 'PPTP', 'Wireguard', 'OpenVPN'].map(type => ({
+      name: type,
+      count: available.filter(i => i.type === type).length
+    }));
+
+    return { byServer, bySpeed, byType, totalAvailable: available.length };
+  }, [inventory, servers]);
+
+  const filteredInventory = inventory.filter(item => 
+    (filterSpeed === 'all' || item.speed === filterSpeed) &&
+    (filterServer === 'all' || item.serverId === filterServer) &&
+    (item.host.includes(search) || item.username.includes(search) || item.id.includes(search))
+  );
 
   return (
     <div className="space-y-8">
@@ -297,6 +321,70 @@ export default function ProxyInventory() {
         </div>
       </div>
 
+      {/* Inventory Statistics Summary */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* By Server */}
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-gray-100 dark:border-slate-800 shadow-sm">
+          <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center">
+            <Globe size={14} className="mr-2 text-blue-600" />
+            Stock by Server
+          </h3>
+          <div className="space-y-3">
+            {inventoryStats.byServer.map(s => (
+              <div key={s.id} className="flex items-center justify-between">
+                <span className="text-sm font-bold text-gray-600 dark:text-gray-400">{s.name}</span>
+                <span className={cn(
+                  "px-2 py-0.5 rounded-lg text-[10px] font-black",
+                  s.count > 0 ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"
+                )}>
+                  {s.count} Left
+                </span>
+              </div>
+            ))}
+            {inventoryStats.byServer.length === 0 && (
+              <p className="text-xs text-gray-400 italic">No servers configured</p>
+            )}
+          </div>
+        </div>
+
+        {/* By Speed */}
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-gray-100 dark:border-slate-800 shadow-sm">
+          <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center">
+            <Shield size={14} className="mr-2 text-purple-600" />
+            Stock by Speed
+          </h3>
+          <div className="space-y-3">
+            {inventoryStats.bySpeed.map(s => (
+              <div key={s.name} className="flex items-center justify-between">
+                <span className="text-sm font-bold text-gray-600 dark:text-gray-400 uppercase">{s.name}</span>
+                <span className={cn(
+                  "px-2 py-0.5 rounded-lg text-[10px] font-black",
+                  s.count > 0 ? "bg-blue-100 text-blue-600" : "bg-gray-100 text-gray-400"
+                )}>
+                  {s.count} Left
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* By Type */}
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-gray-100 dark:border-slate-800 shadow-sm">
+          <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center">
+            <Database size={14} className="mr-2 text-orange-600" />
+            Stock by Type
+          </h3>
+          <div className="grid grid-cols-2 gap-3">
+            {inventoryStats.byType.map(s => (
+              <div key={s.name} className="flex items-center justify-between bg-gray-50 dark:bg-slate-800/50 p-2 rounded-xl border border-gray-100 dark:border-slate-800">
+                <span className="text-[10px] font-black text-gray-500 uppercase">{s.name}</span>
+                <span className="text-xs font-black text-gray-900 dark:text-white">{s.count}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       <div className="flex flex-col md:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
@@ -309,6 +397,16 @@ export default function ProxyInventory() {
           />
         </div>
         <div className="flex gap-2">
+          <select
+            value={filterServer}
+            onChange={(e) => setFilterServer(e.target.value)}
+            className="px-4 py-2 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none min-w-[150px]"
+          >
+            <option value="all">All Servers</option>
+            {servers.map(s => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </select>
           <select
             value={filterSpeed}
             onChange={(e) => setFilterSpeed(e.target.value)}

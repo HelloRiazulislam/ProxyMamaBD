@@ -1090,6 +1090,14 @@ export const buyProxiesBulkAtomic = async (uid: string, planId: string, quantity
       const inventorySnap = await getDocs(inventoryQuery);
       if (inventorySnap.size < quantity) throw new Error('Not enough proxies available in inventory');
       
+      // 3.5 Re-verify each proxy inside transaction BEFORE any writes
+      const proxySnaps = [];
+      for (const proxyDoc of inventorySnap.docs) {
+        const tProxySnap = await transaction.get(proxyDoc.ref);
+        if (tProxySnap.data()?.isAssigned) throw new Error('One of the proxies was just assigned. Please try again.');
+        proxySnaps.push({ ref: proxyDoc.ref, data: tProxySnap.data() });
+      }
+
       // 4. Update Balance
       transaction.update(userRef, {
         walletBalance: user.walletBalance - totalPrice
@@ -1132,12 +1140,8 @@ export const buyProxiesBulkAtomic = async (uid: string, planId: string, quantity
       });
       
       // 8. Assign Proxies
-      for (const proxyDoc of inventorySnap.docs) {
-        // Re-verify each proxy inside transaction
-        const tProxySnap = await transaction.get(proxyDoc.ref);
-        if (tProxySnap.data()?.isAssigned) throw new Error('One of the proxies was just assigned. Please try again.');
-
-        transaction.update(proxyDoc.ref, {
+      for (const proxy of proxySnaps) {
+        transaction.update(proxy.ref, {
           isAssigned: true,
           status: 'sold',
           assignedToUid: uid,
@@ -1198,6 +1202,14 @@ export const buyCustomProxiesAtomic = async (data: {
       const inventorySnap = await getDocs(inventoryQuery);
       if (inventorySnap.size < data.quantity) throw new Error('Not enough proxies available in inventory');
       
+      // 2.5 Re-verify each proxy inside transaction BEFORE any writes
+      const proxySnaps = [];
+      for (const proxyDoc of inventorySnap.docs) {
+        const tProxySnap = await transaction.get(proxyDoc.ref);
+        if (tProxySnap.data()?.isAssigned) throw new Error('One of the proxies was just assigned. Please try again.');
+        proxySnaps.push({ ref: proxyDoc.ref, data: tProxySnap.data() });
+      }
+
       // 3. Update Balance
       transaction.update(userRef, {
         walletBalance: user.walletBalance - data.finalPrice
@@ -1223,12 +1235,8 @@ export const buyCustomProxiesAtomic = async (data: {
       });
       
       // 5. Assign Proxies
-      for (const proxyDoc of inventorySnap.docs) {
-        // Re-verify each proxy inside transaction
-        const tProxySnap = await transaction.get(proxyDoc.ref);
-        if (tProxySnap.data()?.isAssigned) throw new Error('One of the proxies was just assigned. Please try again.');
-
-        transaction.update(proxyDoc.ref, {
+      for (const proxy of proxySnaps) {
+        transaction.update(proxy.ref, {
           isAssigned: true,
           status: 'sold',
           assignedToUid: data.uid,

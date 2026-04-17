@@ -137,6 +137,10 @@ export default function FreeProxyManager() {
       } else if (isAfter(now, end)) {
         setTimeLeft('Expired');
         setIsExpired(true);
+        // Automatically stop campaign when time ends
+        if (campaign.isActive) {
+           handleUpdateCampaign({ isActive: false });
+        }
       } else {
         setTimeLeft(`Expires in ${formatDistanceToNow(end, { addSuffix: false })}`);
         setIsExpired(false);

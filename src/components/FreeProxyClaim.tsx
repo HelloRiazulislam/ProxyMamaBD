@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../App';
+import { useNavigate } from 'react-router-dom';
 import { getFreeProxyCampaign, claimFreeProxy } from '../services/dbService';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -10,6 +11,7 @@ import { formatDistanceToNow, isAfter, isBefore } from 'date-fns';
 
 export default function FreeProxyClaim() {
   const { profile } = useAuth();
+  const navigate = useNavigate();
   const [campaign, setCampaign] = useState<any>(null);
   const [activeClaim, setActiveClaim] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -101,6 +103,7 @@ export default function FreeProxyClaim() {
       await claimFreeProxy(profile.uid);
       await checkClaimStatus();
       toast.success('Free proxy claimed successfully!');
+      navigate('/dashboard/my-proxies');
     } catch (error: any) {
       toast.error(error.message || 'Failed to claim free proxy');
     } finally {

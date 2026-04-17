@@ -329,14 +329,15 @@ export default function FreeProxyManager() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Protocol</label>
-                      <input
-                        type="text"
+                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Protocol (Proxy Type)</label>
+                      <select
                         value={campaign?.proxyType}
-                        onChange={(e) => setCampaign({ ...campaign, proxyType: e.target.value })}
-                        onBlur={() => handleUpdateCampaign({ proxyType: campaign.proxyType })}
-                        className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm"
-                      />
+                        onChange={(e) => handleUpdateCampaign({ proxyType: e.target.value })}
+                        className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-sm"
+                      >
+                        <option value="SOCKS5">SOCKS5</option>
+                        <option value="HTTP">HTTP</option>
+                      </select>
                     </div>
                     <div>
                       <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Speed</label>

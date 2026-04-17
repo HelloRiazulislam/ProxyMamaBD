@@ -224,8 +224,15 @@ export default function MyProxies() {
                         <ShieldCheck size={24} />
                       </div>
                       <div>
-                        <div className="font-bold text-gray-900 dark:text-white text-lg">
-                          {proxy.planTitle || 'Bangladesh Proxy'}
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="font-bold text-gray-900 dark:text-white text-lg">
+                            {proxy.planTitle || 'Bangladesh Proxy'}
+                          </div>
+                          {proxy.collection === 'freeProxyClaims' && proxy.type && (
+                            <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-[10px] font-bold rounded-lg uppercase whitespace-nowrap">
+                              {proxy.type}
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center space-x-2 mt-1">
                           <span className={cn(

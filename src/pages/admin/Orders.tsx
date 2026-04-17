@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { collection, query, onSnapshot, orderBy, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { ShoppingCart, Search, Filter, ExternalLink, Trash2, AlertCircle } from 'lucide-react';
+import { ShoppingCart, Search, Filter, ExternalLink, Trash2, AlertCircle, Copy } from 'lucide-react';
 import { format, differenceInHours } from 'date-fns';
 import { cn } from '../../lib/utils';
 import { toast } from 'react-hot-toast';
@@ -10,6 +10,11 @@ export default function AdminOrders() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Order ID copied!");
+  };
 
   const isExpiringSoon = (expiryDate: any) => {
     if (!expiryDate) return false;
@@ -82,7 +87,12 @@ export default function AdminOrders() {
               ) : filteredOrders.length > 0 ? (
                 filteredOrders.map((order) => (
                   <tr key={order.id} className="hover:bg-gray-50 transition-colors text-sm">
-                    <td className="px-6 py-4 font-mono text-xs text-gray-500 whitespace-nowrap">{order.id.substring(0, 8)}...</td>
+                    <td className="px-6 py-4 font-mono text-xs text-gray-500 whitespace-nowrap flex items-center gap-2">
+                       {order.id.substring(0, 8)}...
+                       <button onClick={() => copyToClipboard(order.id)} className="hover:text-blue-600 transition-colors">
+                          <Copy size={12} />
+                       </button>
+                    </td>
                     <td className="px-6 py-4 font-bold text-gray-700 whitespace-nowrap">{order.userName || 'User'}</td>
                     <td className="px-6 py-4 font-bold text-gray-900 whitespace-nowrap">{order.planTitle}</td>
                     <td className="px-6 py-4 font-bold text-blue-600 whitespace-nowrap">৳{order.amount.toFixed(2)}</td>

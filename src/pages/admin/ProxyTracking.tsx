@@ -2,11 +2,15 @@ import { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot, orderBy, doc, getDoc, addDoc, serverTimestamp, getDocs, limit, updateDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { format, isAfter, differenceInHours, addDays } from 'date-fns';
-import { ShieldCheck, Search, Filter, Clock, AlertTriangle, Eye, Mail, CheckCircle, XCircle, ExternalLink, Loader2, Activity, Key } from 'lucide-react';
+import { ShieldCheck, Search, Filter, Clock, AlertTriangle, Eye, Mail, CheckCircle, XCircle, ExternalLink, Loader2, Activity, Key, Copy } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { toast } from 'react-hot-toast';
 
 export default function ProxyTracking() {
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Copied to clipboard!");
+  };
   const [proxies, setProxies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -374,6 +378,14 @@ export default function ProxyTracking() {
                       <span className="text-sm font-bold text-gray-900 dark:text-white">{selectedProxy.port}</span>
                     </div>
                     <div className="flex justify-between">
+                      <span className="text-xs text-gray-500">Username</span>
+                      <span className="text-sm font-bold text-gray-900 dark:text-white">{selectedProxy.authUsername || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-xs text-gray-500">Password</span>
+                      <span className="text-sm font-bold text-gray-900 dark:text-white">{selectedProxy.authPassword || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
                       <span className="text-xs text-gray-500">Type</span>
                       <span className="text-sm font-bold text-gray-900 dark:text-white">{selectedProxy.type}</span>
                     </div>
@@ -419,7 +431,12 @@ export default function ProxyTracking() {
                   <div className="p-6 bg-blue-50 dark:bg-blue-900/20 rounded-2xl border border-blue-100 dark:border-blue-900/30">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div>
-                        <div className="text-[10px] text-blue-600 dark:text-blue-400 font-bold uppercase mb-1">Order ID</div>
+                        <div className="text-[10px] text-blue-600 dark:text-blue-400 font-bold uppercase mb-1 flex items-center gap-1">
+                          Order ID
+                          <button onClick={() => copyToClipboard(orderDetails.uid)} className="hover:text-blue-800">
+                             <Copy size={12} />
+                          </button>
+                        </div>
                         <div className="text-sm font-bold text-gray-900 dark:text-white font-mono">#{orderDetails.uid.substring(0, 8)}</div>
                       </div>
                       <div>

@@ -30,10 +30,17 @@ export default function Register() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validate email domain
+    const emailLower = email.toLowerCase().trim();
+    if (!emailLower.endsWith('@gmail.com')) {
+      toast.error('Registration failed! Only @gmail.com email addresses are allowed. Temp mails or other domains are not supported.');
+      return;
+    }
+
     setLoading(true);
     try {
       const user = await registerWithEmail(
-        email, 
+        emailLower, 
         password, 
         firstName, 
         lastName, 

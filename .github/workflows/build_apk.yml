@@ -23,18 +23,20 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: 'stable'
           channel: 'stable'
 
-      - name: Install Dependencies
+      - name: Scaffold Android Platforms and Install Dependencies
         run: |
           cd flutter_app
+          # Generate latest Android platform wrappers dynamically to avoid missing file errors
+          flutter create . --platforms=android --org com.proxymama
           flutter pub get
 
-      - name: Build APK (Release)
+      - name: Build APK (Release supporting all ABIs/Architectures)
         run: |
           cd flutter_app
-          flutter build apk --release
+          # Compile with fat APK configuration supporting ARM 32-bit, ARM 64-bit, and x64
+          flutter build apk --release --target-platform android-arm,android-arm64,android-x64
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4

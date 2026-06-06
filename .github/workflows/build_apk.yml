@@ -31,30 +31,8 @@ jobs:
           # Generate latest Android platform wrappers dynamically to avoid missing file errors
           flutter create . --platforms=android --org com.proxymama
           
-          # Patch android/app/build.gradle to target compileSdk 34 and minSdk 21
-          python3 -c "
-          import re
-          file_path = 'android/app/build.gradle'
-          with open(file_path, 'r') as f:
-              content = f.read()
-          
-          # Patch compileSdk & compileSdkVersion
-          content = re.sub(r'compileSdkVersion\s+flutter\.compileSdkVersion', 'compileSdkVersion 34', content)
-          content = re.sub(r'compileSdk\s*=\s*flutter\.compileSdkVersion', 'compileSdk = 34', content)
-          content = re.sub(r'compileSdk\s+33', 'compileSdk 34', content)
-          
-          # Patch targetSdkVersion
-          content = re.sub(r'targetSdkVersion\s+flutter\.targetSdkVersion', 'targetSdkVersion 34', content)
-          content = re.sub(r'targetSdkVersion\s*=\s*flutter\.targetSdkVersion', 'targetSdkVersion = 34', content)
-          
-          # Patch minSdkVersion (Firebase requires at least 21)
-          content = re.sub(r'minSdkVersion\s+flutter\.minSdkVersion', 'minSdkVersion 21', content)
-          content = re.sub(r'minSdkVersion\s*=\s*flutter\.minSdkVersion', 'minSdkVersion = 21', content)
-          
-          with open(file_path, 'w') as f:
-              f.write(content)
-          print('Successfully patched build.gradle to enforce compileSdk 34, targetSdk 34, minSdk 21')
-          "
+          # Patch android/app/build.gradle using our ultra-robust python script
+          python3 patch_gradle.py
           
           flutter pub get
 

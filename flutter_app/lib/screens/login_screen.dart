@@ -153,7 +153,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
               // Password Input Container
               Row(
-                mainAxisAlignment: MainAxisAlignment.between,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     'Password',

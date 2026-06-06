@@ -98,7 +98,7 @@ class DashboardScreen extends StatelessWidget {
                         ],
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, py: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
                           color: const Color(0xFF10B981).withOpacity(0.15),
                           borderRadius: BorderRadius.circular(12),

@@ -24,22 +24,22 @@ class FirebaseService extends ChangeNotifier {
     // Listen to purchased proxy inventory
     var inventoryStream = _db
         .collection('proxyInventory')
-        .where('assignedToUid', '==', currentUser!.uid)
-        .where('isAssigned', '==', true)
+        .where('assignedToUid', isEqualTo: currentUser!.uid)
+        .where('isAssigned', isEqualTo: true)
         .snapshots();
 
     // Listen to free proxy claims
     var claimsStream = _db
         .collection('freeProxyClaims')
-        .where('uid', '==', currentUser!.uid)
+        .where('uid', isEqualTo: currentUser!.uid)
         .snapshots();
 
     // In a production setup, we can yield lists
     // Here we'll merge them or return the inventory stream combined with logic
     return _db
         .collection('proxyInventory')
-        .where('assignedToUid', '==', currentUser!.uid)
-        .where('isAssigned', '==', true)
+        .where('assignedToUid', isEqualTo: currentUser!.uid)
+        .where('isAssigned', isEqualTo: true)
         .snapshots()
         .map((inventSnap) {
           return inventSnap.docs.map((doc) {
@@ -55,7 +55,7 @@ class FirebaseService extends ChangeNotifier {
   Stream<QuerySnapshot> getActiveCampaign() {
     return _db
         .collection('freeProxyCampaigns')
-        .where('isActive', '==', true)
+        .where('isActive', isEqualTo: true)
         .limit(1)
         .snapshots();
   }
@@ -65,7 +65,7 @@ class FirebaseService extends ChangeNotifier {
     if (currentUser == null) return const Stream.empty();
     return _db
         .collection('freeProxyClaims')
-        .where('uid', '==', currentUser!.uid)
+        .where('uid', isEqualTo: currentUser!.uid)
         .snapshots();
   }
 
@@ -152,8 +152,8 @@ class FirebaseService extends ChangeNotifier {
       // 1. Verify user hasn't claimed yet for this campaign
       final claimQuery = await _db
           .collection('freeProxyClaims')
-          .where('uid', '==', uid)
-          .where('campaignId', '==', campaignId)
+          .where('uid', isEqualTo: uid)
+          .where('campaignId', isEqualTo: campaignId)
           .get();
 
       if (claimQuery.docs.isNotEmpty) {

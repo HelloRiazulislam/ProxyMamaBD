@@ -109,7 +109,7 @@ class DashboardScreen extends StatelessWidget {
                           children: [
                             CircleAvatar(radius: 4, backgroundColor: Color(0xFF10B981)),
                             SizedBox(width: 6),
-                            Text('Live', style: TextStyle(color: Color(0xFF10B981), fontSize: 11, fontWeight: FontWeight.black)),
+                            Text('Live', style: TextStyle(color: Color(0xFF10B981), fontSize: 11, fontWeight: FontWeight.w900)),
                           ],
                         ),
                       )
@@ -160,7 +160,7 @@ class DashboardScreen extends StatelessWidget {
                             color: Colors.white,
                             fontSize: 36,
                             fontFamily: 'Space Grotesk',
-                            fontWeight: FontWeight.black,
+                            fontWeight: FontWeight.w900,
                           ),
                         ),
                         const SizedBox(height: 24),

@@ -172,7 +172,7 @@ class _MyProxiesScreenState extends State<MyProxiesScreen> {
                   final typeLabel = (proxy['type'] ?? 'SOCKS5').toString().toUpperCase();
 
                   return Card(
-                    margin: const EdgeInsets.bottomKey(16),
+                    margin: const EdgeInsets.only(bottom: 16),
                     child: Padding(
                       padding: const EdgeInsets.all(20.0),
                       child: Column(

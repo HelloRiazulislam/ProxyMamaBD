@@ -57,7 +57,7 @@ class ProxyMamaApp extends StatelessWidget {
             color: Colors.white,
           ),
         ),
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           color: const Color(0xFF1E293B), // Slate-800
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
